@@ -3,31 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>2160×256 気象 - 大阪市</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&family=Noto+Sans+JP:wght@700;800&display=swap">
+  <title>2160×256 気象情報</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&amp;display=swap">
   <style>
-    :root {
-      --stage-w: 2160px;
-      --stage-h: 256px;
-      --face-w: 240px;
-      --top-h: 56px;
-      --body-h: 144px;
-      --foot-h: 56px;
-      --foot-bg: #fff9f0;
-    }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden;
       background: #000;
+      overflow: hidden;
     }
-    body {
-      position: relative;
-    }
-    /* 原点 (0, 0)。左上から配置し、拡大しない */
     .stage {
       position: absolute;
       left: 0;
@@ -37,856 +24,70 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: #FFEE00;
+      background: #000;
       transform-origin: 0 0;
     }
     .track {
       display: flex;
       flex-direction: row;
+      align-items: center;
       height: 256px;
       width: max-content;
-      transform-origin: 0 0;
       backface-visibility: hidden;
     }
-    @keyframes ticker {
-      from { transform: translate3d(0, 0, 0); }
-      to { transform: translate3d(var(--lap-shift, -2160px), 0, 0); }
-    }
-    .col {
-      position: relative;
-      width: var(--face-w);
-      flex: 0 0 var(--face-w);
+    .seq {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
       height: 256px;
-      display: flex;
-      flex-direction: column;
-      overflow: visible;
+      width: max-content;
+      flex: 0 0 auto;
     }
-    .top {
-      height: var(--top-h);
-      flex: 0 0 var(--top-h);
+    .item {
+      flex: 0 0 auto;
       display: flex;
       align-items: center;
-      justify-content: center;
-      background: #FFF44D;
-      padding: 0 2px;
-      overflow: hidden;
-    }
-    .label {
-      font-family: "Noto Sans JP", sans-serif;
+      height: 256px;
+      margin: 0;
+      padding: 0 48px 0 0;
+      white-space: nowrap;
+      font-family: "Noto Sans JP", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
       font-weight: 700;
-      font-size: 48px;
-      line-height: 1;
-      letter-spacing: 0;
-      color: #000;
-      white-space: nowrap;
-      text-align: center;
-      min-width: 0;
-      max-width: none;
-      overflow: hidden;
-    }
-    .body {
-      height: var(--body-h);
-      flex: 0 0 var(--body-h);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #FFEE00;
-      padding: 0 2px;
-      overflow: hidden;
-    }
-    .val {
-      display: flex;
-      align-items: baseline;
-      justify-content: center;
-      gap: 1px;
-      max-width: 100%;
-      min-width: 0;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .num, .unit { flex: 0 0 auto; }
-    .num {
-      font-family: "Inter", sans-serif;
-      font-weight: 800;
-      font-size: 120px;
-      line-height: 1;
-      color: #000;
-    }
-    .unit {
-      font-family: "Inter", sans-serif;
-      font-weight: 600;
-      font-size: 52px;
-      line-height: 1;
-      color: #000;
-    }
-    .dir {
-      font-family: "Noto Sans JP", sans-serif;
-      font-weight: 800;
-      font-size: 100px;
-      line-height: 1;
-      color: #000;
-      min-width: 0;
-      max-width: none;
-      overflow: hidden;
-      white-space: nowrap;
-      text-align: center;
-    }
-    .icon {
-      width: 200px;
-      height: 120px;
-      background: #fff;
-      border-radius: 8px;
-      object-fit: contain;
-      display: block;
-    }
-    .range {
-      display: inline-flex;
-      align-items: baseline;
-      justify-content: center;
-      gap: 1px;
-      padding: 2px 4px 3px;
-      background: #fff;
-      border-radius: 8px;
-      max-width: 228px;
-      overflow: hidden;
-      white-space: nowrap;
-      line-height: 1;
-    }
-    .hi, .lo, .sep {
-      font-family: "Inter", sans-serif;
-      font-weight: 800;
       font-size: 96px;
       line-height: 1;
-    }
-    .hi { color: #e02020; }
-    .lo { color: #2060e0; }
-    .sep { color: #1a1a1a; }
-    .range .unit {
-      font-size: 44px;
-      font-weight: 700;
-      color: #1a1a1a;
-    }
-    .foot {
-      height: var(--foot-h);
-      flex: 0 0 var(--foot-h);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--foot-bg);
-      padding: 0 3px;
-      overflow: hidden;
-    }
-    .foot.is-span {
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      z-index: 2;
-      height: var(--foot-h);
-    }
-    .foot.is-covered {
-      visibility: hidden;
-    }
-    .foot-txt {
-      display: block;
-      width: 100%;
-      max-width: none;
-      overflow: hidden;
-      white-space: nowrap;
-      text-align: center;
-      font-family: "Noto Sans JP", sans-serif;
-      font-weight: 700;
-      font-size: 48px;
-      line-height: 56px;
-      color: #1a1a1a;
-      letter-spacing: 0;
-    }
-    .foot-txt.is-line {
-      display: flex;
-      align-items: center;
-      justify-content: space-evenly;
-      max-width: none;
-    }
-    .foot-piece {
-      font-family: "Noto Sans JP", sans-serif;
-      font-weight: 700;
-      font-size: 48px;
-      line-height: 56px;
-      color: #1a1a1a;
-      white-space: nowrap;
-    }
-    .col.news {
-      width: auto;
-      flex: 0 0 auto;
-      min-width: 960px;
-    }
-    .col.news .top { background: #143d6b; }
-    .col.news .label { color: #fff; }
-    .col.news .body { background: #f4f7fb; }
-    .news-text {
-      font-family: "Noto Sans JP", sans-serif;
-      font-weight: 800;
-      font-size: 64px;
-      line-height: 1;
-      color: #102033;
-      white-space: nowrap;
-      padding: 0 36px;
-    }
-    .board-foot {
-      display: none;
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 4;
-      height: var(--foot-h);
-      align-items: center;
-      justify-content: center;
-      background: var(--foot-bg);
-      overflow: hidden;
-    }
-    .stage.is-light .label,
-    .stage.is-light .num,
-    .stage.is-light .dir,
-    .stage.is-light .unit { color: #ebebeb; }
-
-    /* 1080×1920。9面を3列にし、下帯の文言は横長と同じ */
-    .stage.is-portrait {
-      width: 1080px;
-      height: 1920px;
-    }
-    .stage.is-portrait .track {
-      display: grid;
-      grid-template-columns: repeat(3, 360px);
-      grid-template-rows: repeat(3, 584px);
-      width: 1080px;
-      height: 1752px;
-      transform: none !important;
-    }
-    .stage.is-portrait .col {
-      width: 360px;
-      height: 584px;
-      flex: none;
-      overflow: hidden;
-    }
-    .stage.is-portrait .top {
-      height: 128px;
-      flex-basis: 128px;
-    }
-    .stage.is-portrait .label {
-      font-size: 72px;
-    }
-    .stage.is-portrait .body {
-      height: 456px;
-      flex-basis: 456px;
-    }
-    .stage.is-portrait .foot {
-      display: none;
-    }
-    .stage.is-portrait .val {
-      max-width: 340px;
-      gap: 8px;
-    }
-    .stage.is-portrait .num { font-size: 200px; }
-    .stage.is-portrait .unit { font-size: 72px; }
-    .stage.is-portrait .dir {
-      font-size: 148px;
-    }
-    .stage.is-portrait .icon {
-      width: 260px;
-      height: 176px;
-      border-radius: 18px;
-    }
-    .stage.is-portrait .range {
-      max-width: 340px;
-      gap: 6px;
-      padding: 10px 16px 12px;
-      border-radius: 16px;
-    }
-    .stage.is-portrait .hi,
-    .stage.is-portrait .lo,
-    .stage.is-portrait .sep { font-size: 132px; }
-    .stage.is-portrait .range .unit { font-size: 56px; }
-    .stage.is-portrait .board-foot {
-      display: flex;
-      width: 1080px;
-      right: auto;
-      height: 168px;
-    }
-    .stage.is-portrait .board-foot .foot-txt {
-      max-width: none;
-      line-height: 1.2;
-    }
-    .stage.is-portrait .board-foot .foot-piece {
-      font-size: 44px;
-      line-height: 1.2;
-    }
-
-    /* 注意報・警報・台風・大雨のテロップ */
-    .telop {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 8;
-      height: var(--foot-h);
-      display: flex;
-      align-items: stretch;
-      overflow: hidden;
+      letter-spacing: 0.02em;
       color: #fff;
-      background: #b00020;
     }
-    .telop[hidden] { display: none !important; }
-    .telop-tag {
-      flex: 0 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 14px;
-      background: #4a000c;
-      font-family: "Noto Sans JP", sans-serif;
-      font-weight: 800;
-      font-size: 28px;
-      line-height: 1;
-      letter-spacing: 0.04em;
-      white-space: nowrap;
-    }
-    .telop-view {
-      flex: 1 1 auto;
-      min-width: 0;
-      overflow: hidden;
-      padding-left: 20px;
-    }
-    .telop-track {
-      display: flex;
-      width: max-content;
-      height: 100%;
-      align-items: center;
-      will-change: transform;
-    }
-    .telop-copy {
-      flex: 0 0 auto;
-      font-family: "Noto Sans JP", sans-serif;
-      font-weight: 800;
-      font-size: 36px;
-      line-height: var(--foot-h);
-      white-space: nowrap;
-      padding-right: 0;
-    }
-    .telop.is-special { background: #5b21b6; }
-    .telop.is-special .telop-tag {
-      background: #2e1065;
-      animation: telop-blink 0.9s steps(2, end) infinite;
-    }
-    .telop.is-warning { background: #c41230; }
-    .telop.is-warning .telop-tag { background: #6d0014; }
-    .telop.is-rain { background: #0c4a8a; }
-    .telop.is-rain .telop-tag { background: #06294d; }
-    .telop.is-typhoon { background: #c2410c; }
-    .telop.is-typhoon .telop-tag { background: #7c2d12; }
-    .telop.is-advisory { background: #f5c400; color: #141414; }
-    .telop.is-advisory .telop-tag { background: #141414; color: #fff; }
-    @keyframes telop-blink {
-      50% { background: #fff; color: #4c1d95; }
-    }
-    .stage.is-portrait .telop { height: 168px; }
-    .stage.is-portrait .telop-tag { font-size: 48px; padding: 0 28px; }
-    .stage.is-portrait .telop-copy { font-size: 64px; line-height: 168px; }
   </style>
 </head>
 <body>
-  <main class="stage" id="stage" aria-label="気象 大阪市">
-    <div class="track" id="track"></div>
-    <div class="board-foot" id="board-foot"></div>
-    <div class="telop" id="telop" hidden aria-live="assertive">
-      <div class="telop-tag" id="telop-tag"></div>
-      <div class="telop-view"><div class="telop-track" id="telop-track"></div></div>
+  <main class="stage" id="stage" aria-label="気象情報">
+    <div class="track" id="track">
+      <div class="seq" id="seq"></div>
     </div>
   </main>
-  <script src="./assets/jma-weather-icons.js"></script>
   <script>
-    /* 大阪市。アメダス「大阪」(62078)。面幅は 240px */
-    var SITE = {
-      label: '大阪市',
-      amedas: '62078',
-      forecastArea: '270000'
-    };
-    var FACE = 240;
     var STAGE = 2160;
-    var SCROLL_PX = 0.9;
-    /* 1周して左へ流れ続ける */
-    var ORDER = ['weather', 'temp', 'rain', 'wdir', 'wind', 'humi', 'pres', 'tmaxmin', 'gust'];
-    var LABELS = {
-      weather: '天気', temp: '気温', rain: '降水量', wdir: '風向き', wind: '風速',
-      humi: '湿度', pres: '気圧', tmaxmin: '最高/最低', gust: '最大瞬間風速'
-    };
-    var DIRS = ['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
-    var newsLine = '';
-    var newsOverview = '';
-
-    var layoutMode = '';
-    var layoutWidth = 0;
-    var lastShow = null;
-
-    function isPortraitView() {
-      return window.innerHeight > window.innerWidth;
-    }
+    var SPEED = 120;
+    var AREA = '270000';
+    var signature = '';
 
     function fitStage() {
       var stage = document.getElementById('stage');
-      var w = window.innerWidth;
-      var h = window.innerHeight;
-      /* 上下の帯は横長。画面全体の縦画面だけ 3列 */
-      var portrait = h > w && h >= 800 && w < 1600;
-      var mode = portrait ? 'portrait' : 'landscape';
-      var sw;
-      var sh;
-      var s;
-      if (portrait) {
-        sw = 1080;
-        sh = 1920;
-        s = Math.min(w / sw, h / sh);
-      } else {
-        sw = 2160;
-        sh = 256;
-        s = Math.min(1, w / 2160, h / 256);
-      }
+      var s = Math.min(window.innerWidth / 2160, window.innerHeight / 256);
       if (!isFinite(s) || s <= 0) s = 1;
-      stage.classList.toggle('is-portrait', portrait);
-      stage.style.width = sw + 'px';
-      stage.style.height = sh + 'px';
-      stage.style.transformOrigin = '0 0';
-      if (portrait) {
-        stage.style.left = Math.max(0, Math.round((w - sw * s) / 2)) + 'px';
-        stage.style.top = Math.max(0, Math.round((h - sh * s) / 2)) + 'px';
-        stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
-      } else {
-        stage.style.left = Math.max(0, Math.round((w - sw * s) / 2)) + 'px';
-        stage.style.top = Math.max(0, Math.round((h - sh * s) / 2)) + 'px';
-        stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
-      }
-      var viewW = portrait ? 1080 : STAGE;
-      var changed = (layoutMode !== '' && layoutMode !== mode) || (layoutMode !== '' && viewW !== layoutWidth);
-      layoutMode = mode;
-      layoutWidth = viewW;
-      if (changed) {
-        buildTrack();
-        if (lastShow) show(lastShow.obs, lastShow.latest, lastShow.code);
-        else fitText();
-      }
-      applyTelop();
+      if (s > 1) s = 1;
+      stage.style.left = Math.max(0, Math.round((window.innerWidth - 2160 * s) / 2)) + 'px';
+      stage.style.top = Math.max(0, Math.round((window.innerHeight - 256 * s) / 2)) + 'px';
+      stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
     }
     window.addEventListener('resize', fitStage);
     fitStage();
 
-    function fieldValue(field) {
-      if (!Array.isArray(field) || field.length < 1) return null;
-      var v = field[0];
-      var q = field[1];
-      if (v === '' || v == null) return null;
-      if (q === 5 || q === 6) return null;
-      return v;
-    }
-
-    function colorsForTemp(t) {
-      if (t == null || !isFinite(Number(t))) return { bg: '#484848', bar: '#585858', light: true };
-      t = Number(t);
-      if (t >= 31) return { bg: '#ED1A3D', bar: '#F24A64', light: true };
-      if (t >= 28) return { bg: '#F39800', bar: '#FFB133', light: true };
-      if (t >= 25) return { bg: '#FFEE00', bar: '#FFF44D', light: false };
-      if (t >= 21) return { bg: '#67C1EA', bar: '#85D0F0', light: false };
-      return { bg: '#3181BD', bar: '#4A96CC', light: true };
-    }
-
-    function panelHtml(type) {
-      var body = '';
-      if (type === 'weather') {
-        body = '<img class="icon weather-icon" alt="" src="./assets/jma-weather/100.svg">';
-      } else if (type === 'wdir') {
-        body = '<span class="dir dir-val">--</span>';
-      } else if (type === 'tmaxmin') {
-        body = '<div class="range"><span class="hi tmax-val">--</span><span class="sep">/</span><span class="lo tmin-val">--</span><span class="unit">℃</span></div>';
-      } else {
-        var unit = { temp: '℃', rain: 'mm', wind: 'm/s', humi: '%', pres: 'hPa', gust: 'm/s' }[type];
-        body = '<div class="val"><span class="num ' + type + '-val">--</span><span class="unit">' + unit + '</span></div>';
-      }
-      return '<section class="col" data-type="' + type + '">' +
-        '<div class="top"><span class="label">' + LABELS[type] + '</span></div>' +
-        '<div class="body">' + body + '</div>' +
-        '<div class="foot"><span class="foot-txt" data-foot="' + type + '"></span></div>' +
-        '</section>';
-    }
-
-    function newsHtml() {
-      return '<section class="col news" data-type="news">' +
-        '<div class="top"><span class="label">ニュース</span></div>' +
-        '<div class="body"><span class="news-text"></span></div>' +
-        '<div class="foot"><span class="foot-txt"></span></div>' +
-        '</section>';
-    }
-
-    function setWidth() {
-      var w = 0;
-      for (var i = 0; i < ORDER.length; i++) w += FACE;
-      return w;
-    }
-
-    function buildTrack() {
-      var lap = setWidth();
-      var stage = document.getElementById('stage');
-      var portrait = stage.classList.contains('is-portrait');
-      var viewW = portrait ? 1080 : (parseFloat(stage.style.width) || STAGE);
-      var copies = portrait ? 1 : 2;
-      var html = '';
-      for (var c = 0; c < copies; c++) {
-        for (var i = 0; i < ORDER.length; i++) {
-          html += panelHtml(ORDER[i]);
-          if (!portrait && ORDER[i] === 'rain') html += newsHtml();
-        }
-      }
-      var track = document.getElementById('track');
-      track.innerHTML = html;
-      track.dataset.lap = String(lap);
-      startScroll();
-    }
-
-    function startScroll() {
-      var track = document.getElementById('track');
-      var stage = document.getElementById('stage');
-      var lap = Number(track.dataset.lap) || setWidth();
-      if (stage.classList.contains('is-portrait') || lap <= 0) {
-        track.style.animation = 'none';
-        return;
-      }
-      /* 文字を毎フレーム描き直さず、帯を1周ぶんだけ滑らせる */
-      var sheet = document.getElementById('ticker-style');
-      if (!sheet) {
-        sheet = document.createElement('style');
-        sheet.id = 'ticker-style';
-        document.head.appendChild(sheet);
-      }
-      sheet.textContent = '@keyframes ticker{from{transform:translate3d(0,0,0)}to{transform:translate3d(-' + lap + 'px,0,0)}}';
-      track.style.animation = 'none';
-      void track.offsetWidth;
-      track.style.animation = 'ticker ' + (lap / 50) + 's linear infinite';
-    }
-
-    function shrink(el, start, min, limit) {
-      if (!el) return;
-      el.style.maxWidth = 'none';
-      var size = start;
-      el.style.fontSize = size + 'px';
-      var parent = el.parentElement;
-      var cap = limit || (parent && parent.clientWidth) || el.clientWidth || 122;
-      while (size > min && el.scrollWidth > cap + 1) {
-        size -= 1;
-        el.style.fontSize = size + 'px';
-      }
-    }
-
-    function fitText() {
-      var track = document.getElementById('track');
-      if (track) track.style.animation = 'none';
-      var portrait = document.getElementById('stage').classList.contains('is-portrait');
-      var labelStart = portrait ? 72 : 48;
-      var labelMin = portrait ? 28 : 20;
-      var labelCap = portrait ? 340 : 224;
-      var dirStart = portrait ? 148 : 100;
-      var dirMin = portrait ? 64 : 40;
-      var dirCap = portrait ? 340 : 224;
-      var numStart = portrait ? 200 : 120;
-      var numMin = portrait ? 72 : 48;
-      var numCap = portrait ? 340 : 224;
-      var rangeStart = portrait ? 132 : 96;
-      var rangeMin = portrait ? 56 : 40;
-      var rangeCap = portrait ? 340 : 224;
-      document.querySelectorAll('.label').forEach(function (el) { shrink(el, labelStart, labelMin, labelCap); });
-      document.querySelectorAll('.dir-val').forEach(function (el) { shrink(el, dirStart, dirMin, dirCap); });
-      groupFeet();
-      document.querySelectorAll('.val').forEach(function (wrap) {
-        var num = wrap.querySelector('.num');
-        var unit = wrap.querySelector('.unit');
-        if (!num) return;
-        var size = numStart;
-        function apply(n) {
-          num.style.fontSize = n + 'px';
-          if (unit) unit.style.fontSize = Math.max(portrait ? 36 : 36, Math.round(n * 0.42)) + 'px';
-        }
-        apply(size);
-        while (size > numMin && wrap.scrollWidth > numCap && wrap.scrollWidth > 0) {
-          size -= 1;
-          apply(size);
-        }
-      });
-      document.querySelectorAll('.range').forEach(function (card) {
-        var hi = card.querySelector('.tmax-val');
-        var lo = card.querySelector('.tmin-val');
-        var sep = card.querySelector('.sep');
-        var size = rangeStart;
-        [hi, lo, sep].forEach(function (el) { if (el) el.style.fontSize = size + 'px'; });
-        while (size > rangeMin && card.scrollWidth > rangeCap) {
-          size -= 1;
-          [hi, lo, sep].forEach(function (el) { if (el) el.style.fontSize = size + 'px'; });
-        }
-        var unit = card.querySelector('.unit');
-        if (unit) unit.style.fontSize = Math.max(portrait ? 32 : 32, Math.round(size * 0.46)) + 'px';
-      });
-      placeNews();
-    }
-
-    function placeNews() {
-      var stage = document.getElementById('stage');
-      if (!stage || stage.classList.contains('is-portrait')) return;
-      var text = newsLine || '大阪市の気象情報をお伝えします';
-      var cols = document.querySelectorAll('.col.news');
-      if (!cols.length) return;
-      cols.forEach(function (col) {
-        var el = col.querySelector('.news-text');
-        if (!el) return;
-        el.textContent = text;
-        var w = Math.max(960, el.scrollWidth + 72);
-        col.style.width = w + 'px';
-        col.style.flexBasis = w + 'px';
-      });
-      var track = document.getElementById('track');
-      var kids = track.children;
-      var step = ORDER.length + 1;
-      var lap = 0;
-      var n = Math.min(step, kids.length);
-      for (var i = 0; i < n; i++) lap += kids[i].offsetWidth;
-      if (lap > 0) track.dataset.lap = String(Math.round(lap));
-      groupFeet();
-      startScroll();
-    }
-
-    function oneDecimal(value) {
-      var n = Number(value);
-      if (!isFinite(n)) return '';
-      return n.toFixed(1);
-    }
-
-    function decimalNews(obs) {
-      if (!obs) return '';
-      var bits = [];
-      var rain = oneDecimal(fieldValue(obs.precipitation10m));
-      var wind = oneDecimal(fieldValue(obs.wind));
-      var gust = oneDecimal(fieldValue(obs.gust));
-      if (rain) bits.push('降水量は' + rain + 'ミリ');
-      if (wind) bits.push('風速は' + wind + 'メートル');
-      if (gust) bits.push('最大瞬間風速は' + gust + 'メートル');
-      if (!bits.length) return '';
-      return bits.join('、') + '。';
-    }
-
-    async function loadNewsLine() {
-      var data = await fetchJson('https://www.jma.go.jp/bosai/forecast/data/overview_forecast/' + SITE.forecastArea + '.json');
-      var raw = '';
-      if (data && data.headlineText && String(data.headlineText).trim()) raw = String(data.headlineText);
-      else if (data && data.text) raw = String(data.text);
-      raw = raw.replace(/\r?\n+/g, '　').replace(/[ \t]+/g, ' ').trim();
-      var bits = raw.split('。').map(function (s) { return s.trim(); }).filter(Boolean);
-      var line = bits.slice(0, 2).join('。');
-      if (line) line += '。';
-      if (line.length > 120) line = line.slice(0, 120) + '…';
-      return line;
-    }
-
-    var FOOT_PARTS = [SITE.label];
-
-    function setFootParts(when) {
-      if (!when || !when.stamp) {
-        FOOT_PARTS = [SITE.label];
-        return;
-      }
-      FOOT_PARTS = [SITE.label, when.stamp, '降水量は10分間', '最高/最低は日中'];
-    }
-
-    function fillBoardFoot() {
-      var bar = document.getElementById('board-foot');
-      bar.innerHTML = '';
-      var txt = document.createElement('div');
-      txt.className = 'foot-txt is-line';
-      FOOT_PARTS.forEach(function (part) {
-        var piece = document.createElement('span');
-        piece.className = 'foot-piece';
-        piece.textContent = part;
-        txt.appendChild(piece);
-      });
-      bar.appendChild(txt);
-      var cap = bar.clientWidth > 40 ? bar.clientWidth - 12 : 1040;
-      var size = cap > 800 ? 48 : 32;
-      var pieces = txt.querySelectorAll('.foot-piece');
-      pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
-      while (size > 10 && txt.scrollWidth > cap) {
-        size -= 1;
-        pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
-      }
-    }
-
-    function groupFeet() {
-      if (document.getElementById('stage').classList.contains('is-portrait')) {
-        fillBoardFoot();
-        return;
-      }
-      var cols = Array.prototype.slice.call(document.querySelectorAll('#track > .col'));
-      cols.forEach(function (col) {
-        var foot = col.querySelector('.foot');
-        if (!foot) return;
-        foot.classList.remove('is-span', 'is-covered');
-        foot.style.width = '';
-        var txt = foot.querySelector('.foot-txt');
-        if (!txt) return;
-        txt.classList.remove('is-line');
-        txt.style.maxWidth = '';
-        txt.textContent = '';
-      });
-      var hasNews = cols.some(function (col) { return col.classList.contains('news'); });
-      var step = ORDER.length + (hasNews ? 1 : 0);
-      for (var i = 0; i < cols.length; i += step) {
-        var count = Math.min(step, cols.length - i);
-        var j = i + count;
-        var foot = cols[i].querySelector('.foot');
-        var txt = foot.querySelector('.foot-txt');
-        var width = 0;
-        var newsCol = null;
-        for (var n = i; n < j; n++) {
-          if (cols[n].classList.contains('news')) newsCol = cols[n];
-          else width += cols[n].offsetWidth;
-        }
-        foot.classList.add('is-span');
-        foot.style.width = width + 'px';
-        txt.classList.add('is-line');
-        txt.style.maxWidth = 'none';
-        FOOT_PARTS.forEach(function (part) {
-          var piece = document.createElement('span');
-          piece.className = 'foot-piece';
-          piece.textContent = part;
-          txt.appendChild(piece);
-        });
-        var size = 48;
-        var pieces = txt.querySelectorAll('.foot-piece');
-        pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
-        while (size > 28 && txt.scrollWidth > width - 16) {
-          size -= 1;
-          pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
-        }
-        for (var k = i + 1; k < j; k++) {
-          if (cols[k].classList.contains('news')) continue;
-          var covered = cols[k].querySelector('.foot');
-          if (covered) covered.classList.add('is-covered');
-        }
-        if (newsCol) {
-          var nfoot = newsCol.querySelector('.foot');
-          var ntxt = nfoot.querySelector('.foot-txt');
-          nfoot.classList.remove('is-covered');
-          ntxt.classList.add('is-line');
-          ntxt.style.maxWidth = 'none';
-          ntxt.textContent = '';
-          FOOT_PARTS.forEach(function (part) {
-            var piece = document.createElement('span');
-            piece.className = 'foot-piece';
-            piece.textContent = part;
-            ntxt.appendChild(piece);
-          });
-          var nsize = 48;
-          var npieces = ntxt.querySelectorAll('.foot-piece');
-          npieces.forEach(function (el) { el.style.fontSize = nsize + 'px'; });
-          var ncap = newsCol.offsetWidth - 16;
-          while (nsize > 28 && ntxt.scrollWidth > ncap) {
-            nsize -= 1;
-            npieces.forEach(function (el) { el.style.fontSize = nsize + 'px'; });
-          }
-        }
-      }
-    }
-
-    function paint(temp) {
-      var c = colorsForTemp(temp);
-      var stage = document.getElementById('stage');
-      stage.classList.toggle('is-light', c.light);
-      stage.style.background = c.bg;
-      document.querySelectorAll('.col:not(.news) .top').forEach(function (el) { el.style.background = c.bar; });
-      document.querySelectorAll('.col:not(.news) .body').forEach(function (el) { el.style.background = c.bg; });
-    }
-
-    function setAll(selector, value) {
-      document.querySelectorAll(selector).forEach(function (el) { el.textContent = value; });
-    }
-
-    function iconForCode(code) {
-      if (window.JmaWeatherIcons) return JmaWeatherIcons.url(code);
-      return './assets/jma-weather/100.svg';
-    }
-
-    function iconFromObs(obs) {
-      var p10 = fieldValue(obs.precipitation10m);
-      var p1 = fieldValue(obs.precipitation1h);
-      if ((p10 != null && Number(p10) > 0) || (p1 != null && Number(p1) > 0)) return iconForCode(300);
-      var sun = fieldValue(obs.sun1h);
-      if (sun != null && Number(sun) < 0.2) return iconForCode(200);
-      return iconForCode(100);
-    }
-
-    function jstParts(date) {
-      var fmt = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Tokyo',
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', hourCycle: 'h23', hour12: false
-      });
-      var p = {};
-      fmt.formatToParts(date).forEach(function (x) { p[x.type] = x.value; });
-      var hour = Number(p.hour);
-      return {
-        month: Number(p.month),
-        day: Number(p.day),
-        hour: String(Number.isFinite(hour) ? hour % 24 : 0).padStart(2, '0'),
-        minute: p.minute
-      };
-    }
-
-    function clockFrom(date) {
-      var p = jstParts(date);
-      var dateText = p.month + '/' + p.day;
-      var timeText = p.hour + ':' + p.minute;
-      return {
-        date: dateText,
-        time: timeText,
-        stamp: dateText + ' ' + timeText
-      };
-    }
-
-    function tokyoYmd(date) {
-      var parts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hourCycle: 'h23'
-      }).formatToParts(date);
-      var bag = {};
-      parts.forEach(function (x) { bag[x.type] = x.value; });
-      return bag.year + bag.month + bag.day;
-    }
-
-    function obsTime(key, fallback) {
-      if (key && /^\d{14}$/.test(key)) {
-        return new Date(key.slice(0, 4) + '-' + key.slice(4, 6) + '-' + key.slice(6, 8) + 'T' + key.slice(8, 10) + ':' + key.slice(10, 12) + ':' + key.slice(12, 14) + '+09:00');
-      }
-      return fallback;
-    }
-
-    function usableObs(rec) {
-      return !!(rec && fieldValue(rec.temp) != null);
-    }
-
-    function pickObs(data, exactKey) {
-      if (data && (data.temp || data.pressure || data.humidity)) {
-        if (!usableObs(data)) throw new Error('観測値が空');
-        return { obs: data, key: exactKey };
-      }
-      var keys = Object.keys(data || {}).filter(function (k) { return /^\d{14}$/.test(k); }).sort();
-      if (!keys.length) throw new Error('観測JSONの形式が不明');
-      var older = keys.filter(function (k) { return !exactKey || k <= exactKey; });
-      var order = older.length ? older : keys;
-      for (var i = order.length - 1; i >= 0; i--) {
-        if (usableObs(data[order[i]])) return { obs: data[order[i]], key: order[i] };
-      }
-      throw new Error('有効な観測なし');
+    function linesOf(text) {
+      return String(text || '').split(/\n+/).map(function (line) {
+        return line.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '');
+      }).filter(function (line) { return line.length > 0; });
     }
 
     async function fetchJson(url) {
@@ -895,297 +96,59 @@
       return res.json();
     }
 
-    async function loadAmedas() {
-      var timeRes = await fetch('https://www.jma.go.jp/bosai/amedas/data/latest_time.txt', { cache: 'no-store' });
-      if (!timeRes.ok) throw new Error('latest_time');
-      var iso = (await timeRes.text()).trim();
-      if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(iso)) iso = iso.replace(/\.\d+$/, '') + '+09:00';
-      var latest = new Date(iso);
-      if (isNaN(latest.getTime())) throw new Error('時刻が不正');
-      var lastErr = null;
-      var tried = {};
-      for (var back = 0; back <= 30; back += 10) {
-        var t = new Date(latest.getTime() - back * 60000);
-        var p = jstParts(t);
-        var ymd = tokyoYmd(t);
-        var blockH = String(Math.floor(Number(p.hour) / 3) * 3).padStart(2, '0');
-        var exactKey = ymd + p.hour + p.minute + '00';
-        var jobs = [
-          { url: 'https://www.jma.go.jp/bosai/amedas/data/point/' + SITE.amedas + '/' + ymd + '_' + blockH + '.json', map: false },
-          { url: 'https://www.jma.go.jp/bosai/amedas/data/map/' + exactKey + '.json', map: true }
-        ];
-        for (var i = 0; i < jobs.length; i++) {
-          if (tried[jobs[i].url]) continue;
-          tried[jobs[i].url] = true;
-          try {
-            var data = await fetchJson(jobs[i].url);
-            var picked = jobs[i].map ? pickObs(data[SITE.amedas], exactKey) : pickObs(data, exactKey);
-            return { obs: picked.obs, latest: obsTime(picked.key, t) };
-          } catch (e) { lastErr = e; }
-        }
-      }
-      throw lastErr || new Error('アメダス取得失敗');
-    }
-
-    async function loadForecastCode() {
-      var data = await fetchJson('https://www.jma.go.jp/bosai/forecast/data/forecast/' + SITE.forecastArea + '.json');
-      if (!Array.isArray(data)) return null;
-      for (var i = 0; i < data.length; i++) {
-        var series = data[i] && data[i].timeSeries;
-        if (!Array.isArray(series)) continue;
-        for (var j = 0; j < series.length; j++) {
-          var area = series[j].areas && series[j].areas[0];
-          if (area && area.weatherCodes && area.weatherCodes.length && area.weatherCodes[0] !== '') {
-            return area.weatherCodes[0];
-          }
-        }
-      }
-      return null;
-    }
-
-    function show(obs, latest, forecastCode) {
-      lastShow = { obs: obs, latest: latest, code: forecastCode };
-      var temp = fieldValue(obs.temp);
-      var humi = fieldValue(obs.humidity);
-      var p10 = fieldValue(obs.precipitation10m);
-      var wind = fieldValue(obs.wind);
-      var pres = fieldValue(obs.normalPressure);
-      if (pres == null) pres = fieldValue(obs.pressure);
-      var wdir = fieldValue(obs.windDirection);
-      var maxT = fieldValue(obs.maxTemp);
-      var minT = fieldValue(obs.minTemp);
-      var gust = fieldValue(obs.gust);
-      var when = clockFrom(latest);
-
-      setAll('.temp-val', temp != null ? String(Math.round(Number(temp))) : '--');
-      setAll('.humi-val', humi != null ? String(Math.round(Number(humi))) : '--');
-      setAll('.rain-val', p10 != null ? Number(p10).toFixed(1) : '--');
-      setAll('.pres-val', pres != null ? String(Math.round(Number(pres))) : '--');
-      setAll('.wind-val', wind != null ? Number(wind).toFixed(1) : '--');
-      setAll('.gust-val', gust != null ? Number(gust).toFixed(1) : '--');
-      setAll('.dir-val', wdir != null ? (DIRS[Math.round(Number(wdir)) % 16] || '--') : '--');
-      setAll('.tmax-val', maxT != null ? String(Math.round(Number(maxT))) : '--');
-      setAll('.tmin-val', minT != null ? String(Math.round(Number(minT))) : '--');
-
-      var src = forecastCode != null ? iconForCode(forecastCode) : iconFromObs(obs);
-      document.querySelectorAll('.weather-icon').forEach(function (el) { el.src = src; });
-      setFootParts(when);
-      newsLine = (decimalNews(obs) + (newsOverview ? '　' + newsOverview : '')).trim();
-      paint(temp);
-      fitText();
-    }
-
-    var WARN_NAME = {
-      '02': '暴風雪警報', '03': '大雨警報', '04': '洪水警報', '05': '暴風警報',
-      '06': '大雪警報', '07': '波浪警報', '08': '高潮警報',
-      '10': '大雨注意報', '12': '大雪注意報', '13': '風雪注意報', '14': '雷注意報',
-      '15': '強風注意報', '16': '波浪注意報', '17': '融雪注意報', '18': '高潮注意報',
-      '19': '濃霧注意報', '20': '乾燥注意報', '21': 'なだれ注意報', '22': '低温注意報',
-      '23': '霜注意報', '24': '着氷注意報', '25': '着雪注意報',
-      '32': '暴風雪特別警報', '33': '大雨特別警報', '35': '暴風特別警報',
-      '36': '大雪特別警報', '37': '波浪特別警報', '38': '高潮特別警報'
-    };
-    var LEVEL_RANK = { special: 5, warning: 4, rain: 3, typhoon: 2, advisory: 1 };
-    var LEVEL_TAG = { special: '特別警報', warning: '警報', rain: '大雨', typhoon: '台風', advisory: '注意報' };
-    var telopPayload = null;
-
-    function warnMeta(code) {
-      var key = String(code);
-      if (key.length === 1) key = '0' + key;
-      var name = WARN_NAME[key];
-      if (!name) return null;
-      var level = 'advisory';
-      if (name.indexOf('特別警報') >= 0) level = 'special';
-      else if (name.indexOf('警報') >= 0) level = 'warning';
-      return { name: name, level: level };
-    }
-
-    function warningsForCity(data) {
-      var found = [];
-      var seen = {};
-      var types = (data && data.areaTypes) || [];
-      for (var i = 0; i < types.length; i++) {
-        var areas = types[i].areas || [];
-        for (var j = 0; j < areas.length; j++) {
-          if (String(areas[j].code) !== '2710000') continue;
-          var list = areas[j].warnings || [];
-          for (var k = 0; k < list.length; k++) {
-            var status = list[k].status || '';
-            if (!status || status === '解除' || status.indexOf('なし') >= 0) continue;
-            var meta = warnMeta(list[k].code);
-            if (!meta || seen[meta.name]) continue;
-            seen[meta.name] = true;
-            found.push({ name: meta.name, level: meta.level, status: status });
-          }
-        }
-      }
-      found.sort(function (a, b) { return LEVEL_RANK[b.level] - LEVEL_RANK[a.level]; });
-      return found;
-    }
-
-    function warnSentence(item) {
-      var verb = '発表されています';
-      if (item.status === '継続') verb = '継続しています';
-      else if (item.status.indexOf('から') >= 0) verb = 'に切り替わっています';
-      return '大阪市に' + item.name + 'が' + verb;
-    }
-
-    function rainAmount(value) {
-      var n = Number(value);
-      if (!isFinite(n)) return '';
-      if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
-      return n.toFixed(1);
-    }
-
-    function rainSentence(obs) {
-      if (!obs) return '';
-      var p1 = fieldValue(obs.precipitation1h);
-      var p3 = fieldValue(obs.precipitation3h);
-      var p10 = fieldValue(obs.precipitation10m);
-      if (p1 != null && Number(p1) >= 20) return '大阪市で大雨です　1時間の降水量は' + rainAmount(p1) + 'ミリ';
-      if (p3 != null && Number(p3) >= 50) return '大阪市で大雨です　3時間の降水量は' + rainAmount(p3) + 'ミリ';
-      if (p10 != null && Number(p10) >= 5) return '大阪市で大雨です　10分間の降水量は' + rainAmount(p10) + 'ミリ';
-      return '';
-    }
-
-    function typhoonSentence(spec, brief) {
-      if (!Array.isArray(spec)) return '';
-      var title = null;
-      var now = null;
-      for (var i = 0; i < spec.length; i++) {
-        if (spec[i].part === 'title') title = spec[i];
-        else if (spec[i].part && spec[i].part.jp === '実況') now = spec[i];
-      }
-      var numRaw = String((title && title.typhoonNumber) || (brief && brief.typhoonNumber) || '');
-      var num = numRaw.length >= 4 ? String(Number(numRaw.slice(2))) : '';
-      var name = title && title.name && title.name.jp;
-      var cat = (now && now.category && now.category.jp) || (title && title.category && title.category.jp) || '台風';
-      var head = cat;
-      if (num && cat.indexOf('台風') >= 0) head = '台風' + num + '号';
-      else if (num) head = cat;
-      if (name) head += '　' + name;
-      var bits = [head];
-      if (now && now.location) {
-        var move = now.location;
-        if (now.course) move += 'を' + now.course + 'へ';
-        if (now.speed && now.speed['km/h']) move += '時速' + now.speed['km/h'] + 'キロで進んでいます';
-        else move += 'にあります';
-        bits.push(move);
-      }
-      if (now && now.pressure) bits.push('中心気圧' + now.pressure + 'ヘクトパスカル');
-      var wind = now && now.maximumWind && now.maximumWind.sustained && now.maximumWind.sustained['m/s'];
-      if (wind) bits.push('最大風速' + wind + 'メートル');
-      return bits.join('　');
-    }
-
-    async function loadTyphoonLines() {
-      var list = await fetchJson('https://www.jma.go.jp/bosai/typhoon/data/targetTc.json');
-      if (!Array.isArray(list)) return [];
+    async function loadLines() {
+      var overview = await fetchJson('https://www.jma.go.jp/bosai/forecast/data/overview_forecast/' + AREA + '.json');
       var lines = [];
-      for (var i = 0; i < list.length; i++) {
-        var id = list[i] && list[i].tropicalCyclone;
-        if (!id) continue;
-        try {
-          var spec = await fetchJson('https://www.jma.go.jp/bosai/typhoon/data/' + id + '/specifications.json');
-          var line = typhoonSentence(spec, list[i]);
-          if (line) lines.push(line);
-        } catch (e) {}
-      }
+      linesOf(overview && overview.headlineText).forEach(function (line) { lines.push(line); });
+      linesOf(overview && overview.text).forEach(function (line) { lines.push(line); });
+      if (!lines.length) lines.push('大阪市の気象情報を受信しています');
       return lines;
     }
 
-    function applyTelop() {
-      var bar = document.getElementById('telop');
-      var tag = document.getElementById('telop-tag');
-      var track = document.getElementById('telop-track');
-      if (!bar || !track) return;
-      if (!telopPayload) {
-        bar.hidden = true;
-        track.style.animation = 'none';
-        track.innerHTML = '';
-        return;
-      }
-      bar.hidden = false;
-      bar.className = 'telop is-' + telopPayload.level;
-      tag.textContent = telopPayload.tag;
-      track.innerHTML = '';
+    function play(lines) {
+      var seq = document.getElementById('seq');
+      var track = document.getElementById('track');
+      seq.innerHTML = '';
+      lines.forEach(function (line) {
+        var row = document.createElement('div');
+        row.className = 'item';
+        row.textContent = line;
+        seq.appendChild(row);
+      });
+      var clone = seq.nextElementSibling;
+      if (clone) clone.remove();
+      clone = seq.cloneNode(true);
+      clone.removeAttribute('id');
+      clone.setAttribute('aria-hidden', 'true');
+      track.appendChild(clone);
+
       track.style.animation = 'none';
-      var text = telopPayload.text;
-      var unit = document.createElement('span');
-      unit.className = 'telop-copy';
-      unit.textContent = text;
-      track.appendChild(unit);
-      var unitW = Math.ceil(unit.getBoundingClientRect().width);
-      var viewW = track.parentElement.clientWidth || 1600;
-      if (unitW < 1) unitW = text.length * 36;
-      var count = Math.max(2, Math.ceil((viewW + unitW) / unitW));
-      for (var i = 1; i < count; i++) track.appendChild(unit.cloneNode(true));
-      var sheet = document.getElementById('telop-style');
+      track.style.transform = 'none';
+      void track.offsetWidth;
+      var lap = seq.getBoundingClientRect().width;
+      if (!(lap > 0)) return;
+      var sheet = document.getElementById('ticker-style');
       if (!sheet) {
         sheet = document.createElement('style');
-        sheet.id = 'telop-style';
+        sheet.id = 'ticker-style';
         document.head.appendChild(sheet);
       }
-      sheet.textContent = '@keyframes telop-move{from{transform:translate3d(0,0,0)}to{transform:translate3d(-' + unitW + 'px,0,0)}}';
-      var portrait = document.getElementById('stage').classList.contains('is-portrait');
-      var speed = portrait ? 110 : 80;
-      void track.offsetWidth;
-      track.style.animation = 'telop-move ' + Math.max(8, unitW / speed) + 's linear infinite';
+      var lapText = String(Math.round(lap));
+      sheet.textContent = '@keyframes ticker{from{transform:translate3d(0,0,0)}to{transform:translate3d(-' + lapText + 'px,0,0)}}';
+      track.style.animation = 'ticker ' + (lap / SPEED) + 's linear infinite';
     }
-
-    async function refreshTelop(obs) {
-      var pieces = [];
-      var level = '';
-      function push(lv, text) {
-        if (!text) return;
-        pieces.push(text);
-        if (!level || LEVEL_RANK[lv] > LEVEL_RANK[level]) level = lv;
-      }
-      try {
-        var data = await fetchJson('https://www.jma.go.jp/bosai/warning/data/warning/' + SITE.forecastArea + '.json');
-        var warnings = warningsForCity(data);
-        for (var i = 0; i < warnings.length; i++) push(warnings[i].level, warnSentence(warnings[i]));
-      } catch (e) {}
-      try {
-        var typhoons = await loadTyphoonLines();
-        for (var t = 0; t < typhoons.length; t++) push('typhoon', typhoons[t]);
-      } catch (e) {}
-      push('rain', rainSentence(obs));
-      telopPayload = pieces.length ? {
-        level: level,
-        tag: LEVEL_TAG[level],
-        text: pieces.join('　　') + '　　'
-      } : null;
-      applyTelop();
-    }
-
-    buildTrack();
-    fitText();
-    startScroll();
 
     async function refresh() {
-      try {
-        var loaded = await loadAmedas();
-        var code = null;
-        try { code = await loadForecastCode(); } catch (e) { code = null; }
-        try { newsOverview = await loadNewsLine(); } catch (e) { newsOverview = newsOverview || ''; }
-        show(loaded.obs, loaded.latest, code);
-        refreshTelop(loaded.obs);
-      } catch (e) {
-        if (lastShow) return;
-        paint(null);
-        ['temp', 'rain', 'wind', 'humi', 'pres', 'gust'].forEach(function (k) { setAll('.' + k + '-val', '--'); });
-        setAll('.dir-val', '--');
-        fitText();
-        refreshTelop(null);
-      }
+      var lines = await loadLines();
+      var next = lines.join('\n');
+      if (next === signature) return;
+      signature = next;
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      play(lines);
     }
 
     refresh();
     setInterval(refresh, 10 * 60 * 1000);
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () { fitText(); applyTelop(); });
-    }
   </script>
 </body>
 </html>
