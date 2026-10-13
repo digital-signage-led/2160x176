@@ -329,20 +329,37 @@
 
     function fitStage() {
       var stage = document.getElementById('stage');
-      var portrait = isPortraitView();
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+      var portrait = h > w;
+      var signage = !portrait && h <= 240;
       var mode = portrait ? 'portrait' : 'landscape';
-      /* 横長は枠の幅に合わせる。2160×176 も 1080×176 も縮小せず高さ 176 */
-      var sw = portrait ? 1080 : Math.max(FACE, Math.round(window.innerWidth));
-      var sh = portrait ? 1920 : 176;
-      var s = Math.min(window.innerWidth / sw, window.innerHeight / sh, 1);
+      var sw;
+      var sh;
+      var s;
+      if (portrait) {
+        sw = 1080;
+        sh = 1920;
+        s = Math.min(w / sw, h / sh);
+      } else if (signage) {
+        /* 1080×176 や 2160×176 の枠。高さ 176 のまま、幅だけ枠に合わせる */
+        sw = Math.max(FACE, Math.round(w));
+        sh = 176;
+        s = Math.min(w / sw, h / sh, 1);
+      } else {
+        /* 通常のブラウザ。2160×176 を画面の中に全部収める */
+        sw = STAGE;
+        sh = 176;
+        s = Math.min(w / sw, h / sh);
+      }
       if (!isFinite(s) || s <= 0) s = 1;
       stage.classList.toggle('is-portrait', portrait);
       stage.style.width = sw + 'px';
       stage.style.height = sh + 'px';
-      stage.style.left = '0px';
-      stage.style.top = '0px';
+      stage.style.left = Math.max(0, Math.round((w - sw * s) / 2)) + 'px';
+      stage.style.top = Math.max(0, Math.round((h - sh * s) / 2)) + 'px';
       stage.style.transformOrigin = '0 0';
-      stage.style.transform = (s === 1) ? 'none' : ('scale(' + s + ')');
+      stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
       var changed = layoutMode !== '' && layoutMode !== mode;
       layoutMode = mode;
       if (changed) {
