@@ -214,23 +214,6 @@
       color: #1a1a1a;
       white-space: nowrap;
     }
-    .col.news {
-      width: auto;
-      flex: 0 0 auto;
-      min-width: 960px;
-    }
-    .col.news .top { background: #143d6b; }
-    .col.news .label { color: #fff; }
-    .col.news .body { background: #f4f7fb; }
-    .news-text {
-      font-family: "Noto Sans JP", sans-serif;
-      font-weight: 800;
-      font-size: 64px;
-      line-height: 1;
-      color: #102033;
-      white-space: nowrap;
-      padding: 0 36px;
-    }
     .board-foot {
       display: none;
       position: absolute;
@@ -345,8 +328,6 @@
       humi: '湿度', pres: '気圧', tmaxmin: '最高/最低', gust: '最大瞬間風速'
     };
     var DIRS = ['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
-    var newsLine = '';
-    var newsOverview = '';
 
     var layoutMode = '';
     var layoutWidth = 0;
@@ -411,14 +392,6 @@
         '</section>';
     }
 
-    function newsHtml() {
-      return '<section class="col news" data-type="news">' +
-        '<div class="top"><span class="label">ニュース</span></div>' +
-        '<div class="body"><span class="news-text"></span></div>' +
-        '<div class="foot"><span class="foot-txt"></span></div>' +
-        '</section>';
-    }
-
     function setWidth() {
       var w = 0;
       for (var i = 0; i < ORDER.length; i++) w += FACE;
@@ -433,10 +406,7 @@
       var copies = portrait ? 1 : 2;
       var html = '';
       for (var c = 0; c < copies; c++) {
-        for (var i = 0; i < ORDER.length; i++) {
-          html += panelHtml(ORDER[i]);
-          if (!portrait && ORDER[i] === 'rain') html += newsHtml();
-        }
+        for (var i = 0; i < ORDER.length; i++) html += panelHtml(ORDER[i]);
       }
       var track = document.getElementById('track');
       track.innerHTML = html;
@@ -523,64 +493,7 @@
         var unit = card.querySelector('.unit');
         if (unit) unit.style.fontSize = Math.max(portrait ? 32 : 32, Math.round(size * 0.46)) + 'px';
       });
-      placeNews();
-    }
-
-    function placeNews() {
-      var stage = document.getElementById('stage');
-      if (!stage || stage.classList.contains('is-portrait')) return;
-      var text = newsLine || '大阪市の気象情報をお伝えします';
-      var cols = document.querySelectorAll('.col.news');
-      if (!cols.length) return;
-      cols.forEach(function (col) {
-        var el = col.querySelector('.news-text');
-        if (!el) return;
-        el.textContent = text;
-        var w = Math.max(960, el.scrollWidth + 72);
-        col.style.width = w + 'px';
-        col.style.flexBasis = w + 'px';
-      });
-      var track = document.getElementById('track');
-      var kids = track.children;
-      var step = ORDER.length + 1;
-      var lap = 0;
-      var n = Math.min(step, kids.length);
-      for (var i = 0; i < n; i++) lap += kids[i].offsetWidth;
-      if (lap > 0) track.dataset.lap = String(Math.round(lap));
-      groupFeet();
       startScroll();
-    }
-
-    function oneDecimal(value) {
-      var n = Number(value);
-      if (!isFinite(n)) return '';
-      return n.toFixed(1);
-    }
-
-    function decimalNews(obs) {
-      if (!obs) return '';
-      var bits = [];
-      var rain = oneDecimal(fieldValue(obs.precipitation10m));
-      var wind = oneDecimal(fieldValue(obs.wind));
-      var gust = oneDecimal(fieldValue(obs.gust));
-      if (rain) bits.push('降水量は' + rain + 'ミリ');
-      if (wind) bits.push('風速は' + wind + 'メートル');
-      if (gust) bits.push('最大瞬間風速は' + gust + 'メートル');
-      if (!bits.length) return '';
-      return bits.join('、') + '。';
-    }
-
-    async function loadNewsLine() {
-      var data = await fetchJson('https://www.jma.go.jp/bosai/forecast/data/overview_forecast/' + SITE.forecastArea + '.json');
-      var raw = '';
-      if (data && data.headlineText && String(data.headlineText).trim()) raw = String(data.headlineText);
-      else if (data && data.text) raw = String(data.text);
-      raw = raw.replace(/\r?\n+/g, '　').replace(/[ \t]+/g, ' ').trim();
-      var bits = raw.split('。').map(function (s) { return s.trim(); }).filter(Boolean);
-      var line = bits.slice(0, 2).join('。');
-      if (line) line += '。';
-      if (line.length > 120) line = line.slice(0, 120) + '…';
-      return line;
     }
 
     var FOOT_PARTS = [SITE.label];
@@ -628,34 +541,10 @@
         txt.style.maxWidth = '';
         txt.textContent = '';
       });
-      var i = 0;
-      while (i < cols.length) {
-        if (cols[i].classList.contains('news')) {
-          var nfoot = cols[i].querySelector('.foot');
-          var ntxt = nfoot.querySelector('.foot-txt');
-          nfoot.classList.remove('is-covered');
-          ntxt.classList.add('is-line');
-          ntxt.style.maxWidth = 'none';
-          ntxt.textContent = '';
-          FOOT_PARTS.forEach(function (part) {
-            var piece = document.createElement('span');
-            piece.className = 'foot-piece';
-            piece.textContent = part;
-            ntxt.appendChild(piece);
-          });
-          var nsize = 48;
-          var npieces = ntxt.querySelectorAll('.foot-piece');
-          npieces.forEach(function (el) { el.style.fontSize = nsize + 'px'; });
-          var ncap = cols[i].offsetWidth - 16;
-          while (nsize > 28 && ntxt.scrollWidth > ncap) {
-            nsize -= 1;
-            npieces.forEach(function (el) { el.style.fontSize = nsize + 'px'; });
-          }
-          i += 1;
-          continue;
-        }
-        var j = i;
-        while (j < cols.length && !cols[j].classList.contains('news')) j += 1;
+      var step = ORDER.length;
+      for (var i = 0; i < cols.length; i += step) {
+        var count = Math.min(step, cols.length - i);
+        var j = i + count;
         var foot = cols[i].querySelector('.foot');
         var txt = foot.querySelector('.foot-txt');
         var width = 0;
@@ -681,7 +570,6 @@
           var covered = cols[k].querySelector('.foot');
           if (covered) covered.classList.add('is-covered');
         }
-        i = j;
       }
     }
 
@@ -690,8 +578,8 @@
       var stage = document.getElementById('stage');
       stage.classList.toggle('is-light', c.light);
       stage.style.background = c.bg;
-      document.querySelectorAll('.col:not(.news) .top').forEach(function (el) { el.style.background = c.bar; });
-      document.querySelectorAll('.col:not(.news) .body').forEach(function (el) { el.style.background = c.bg; });
+      document.querySelectorAll('.col .top').forEach(function (el) { el.style.background = c.bar; });
+      document.querySelectorAll('.col .body').forEach(function (el) { el.style.background = c.bg; });
     }
 
     function setAll(selector, value) {
@@ -833,7 +721,6 @@
       var src = forecastCode != null ? iconForCode(forecastCode) : iconFromObs(obs);
       document.querySelectorAll('.weather-icon').forEach(function (el) { el.src = src; });
       setFootParts(when);
-      newsLine = (decimalNews(obs) + (newsOverview ? '　' + newsOverview : '')).trim();
       paint(temp);
       fitText();
     }
@@ -847,7 +734,6 @@
         var loaded = await loadAmedas();
         var code = null;
         try { code = await loadForecastCode(); } catch (e) { code = null; }
-        try { newsOverview = await loadNewsLine(); } catch (e) { newsOverview = newsOverview || ''; }
         show(loaded.obs, loaded.latest, code);
       } catch (e) {
         paint(null);
