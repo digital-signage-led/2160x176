@@ -10,7 +10,6 @@
       --stage-w: 2160px;
       --stage-h: 176px;
       --face-w: 128px;
-      --logo-w: 128px;
       --top-h: 40px;
       --body-h: 96px;
       --foot-h: 40px;
@@ -207,24 +206,6 @@
       color: #1a1a1a;
       white-space: nowrap;
     }
-    .col.logo {
-      width: var(--logo-w);
-      flex: 0 0 var(--logo-w);
-      height: 176px;
-      background: #fff;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .col.logo .logo-img {
-      display: block;
-      width: 128px;
-      height: 176px;
-      object-fit: contain;
-      transform: scale(1.62);
-      transform-origin: center center;
-    }
     .stage.is-light .label,
     .stage.is-light .num,
     .stage.is-light .dir,
@@ -244,11 +225,10 @@
       forecastArea: '270000'
     };
     var FACE = 128;
-    var LOGO = 128;
     var STAGE = 2160;
     var SCROLL_PX = 0.9;
     /* 1周して左へ流れ続ける */
-    var ORDER = ['weather', 'temp', 'rain', 'wdir', 'wind', 'humi', 'pres', 'tmaxmin', 'gust', 'logo'];
+    var ORDER = ['weather', 'temp', 'rain', 'wdir', 'wind', 'humi', 'pres', 'tmaxmin', 'gust'];
     var LABELS = {
       weather: '天気', temp: '気温', rain: '降水量', wdir: '風向き', wind: '風速',
       humi: '湿度', pres: '気圧', tmaxmin: '最高/最低', gust: '最大瞬間風速'
@@ -287,9 +267,6 @@
     }
 
     function panelHtml(type) {
-      if (type === 'logo') {
-        return '<section class="col logo" data-type="logo"><img class="logo-img" src="./assets/konoike_logo.webp" alt="KONOIKE"></section>';
-      }
       var body = '';
       if (type === 'weather') {
         body = '<img class="icon weather-icon" alt="" src="./assets/jma-weather/100.svg">';
@@ -310,7 +287,7 @@
 
     function setWidth() {
       var w = 0;
-      for (var i = 0; i < ORDER.length; i++) w += ORDER[i] === 'logo' ? LOGO : FACE;
+      for (var i = 0; i < ORDER.length; i++) w += FACE;
       return w;
     }
 
