@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2160×256 気象情報</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&amp;display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+    .stage {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 2160px;
+      height: 256px;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+      transform-origin: 0 0;
+    }
+    .track {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      height: 256px;
+      width: max-content;
+      backface-visibility: hidden;
+    }
+    .seq {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      height: 256px;
+      width: max-content;
+      flex: 0 0 auto;
+    }
+    .item {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      height: 256px;
+      margin: 0;
+      padding: 0 48px 0 0;
+      white-space: nowrap;
+      font-family: "Noto Sans JP", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+      font-weight: 700;
+      font-size: 96px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <main class="stage" id="stage" aria-label="気象情報">
+    <div class="track" id="track">
+      <div class="seq" id="seq"></div>
+    </div>
+  </main>
+  <script>
+    var STAGE = 2160;
+    var SPEED = 120;
+    var AREA = '270000';
+    var signature = '';
+
+    function fitStage() {
+      var stage = document.getElementById('stage');
+      var s = Math.min(window.innerWidth / 2160, window.innerHeight / 256);
+      if (!isFinite(s) || s <= 0) s = 1;
+      if (s > 1) s = 1;
+      stage.style.left = Math.max(0, Math.round((window.innerWidth - 2160 * s) / 2)) + 'px';
+      stage.style.top = Math.max(0, Math.round((window.innerHeight - 256 * s) / 2)) + 'px';
+      stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
+    }
+    window.addEventListener('resize', fitStage);
+    fitStage();
+
+    function linesOf(text) {
+      return String(text || '').split(/\n+/).map(function (line) {
+        return line.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '');
+      }).filter(function (line) { return line.length > 0; });
+    }
+
+    async function fetchJson(url) {
+      var res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }
+
+    async function loadLines() {
+      var overview = await fetchJson('https://www.jma.go.jp/bosai/forecast/data/overview_forecast/' + AREA + '.json');
+      var lines = [];
+      linesOf(overview && overview.headlineText).forEach(function (line) { lines.push(line); });
+      linesOf(overview && overview.text).forEach(function (line) { lines.push(line); });
+      if (!lines.length) lines.push('大阪市の気象情報を受信しています');
+      return lines;
+    }
+
+    function play(lines) {
+      var seq = document.getElementById('seq');
+      var track = document.getElementById('track');
+      seq.innerHTML = '';
+      lines.forEach(function (line) {
+        var row = document.createElement('div');
+        row.className = 'item';
+        row.textContent = line;
+        seq.appendChild(row);
+      });
+      var clone = seq.nextElementSibling;
+      if (clone) clone.remove();
+      clone = seq.cloneNode(true);
+      clone.removeAttribute('id');
+      clone.setAttribute('aria-hidden', 'true');
+      track.appendChild(clone);
+
+      track.style.animation = 'none';
+      track.style.transform = 'none';
+      void track.offsetWidth;
+      var lap = seq.getBoundingClientRect().width;
+      if (!(lap > 0)) return;
+      var sheet = document.getElementById('ticker-style');
+      if (!sheet) {
+        sheet = document.createElement('style');
+        sheet.id = 'ticker-style';
+        document.head.appendChild(sheet);
+      }
+      var lapText = String(Math.round(lap));
+      sheet.textContent = '@keyframes ticker{from{transform:translate3d(0,0,0)}to{transform:translate3d(-' + lapText + 'px,0,0)}}';
+      track.style.animation = 'ticker ' + (lap / SPEED) + 's linear infinite';
+    }
+
+    async function refresh() {
+      var lines = await loadLines();
+      var next = lines.join('\n');
+      if (next === signature) return;
+      signature = next;
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      play(lines);
+    }
+
+    refresh();
+    setInterval(refresh, 10 * 60 * 1000);
+  </script>
+</body>
+</html>
