@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>2160×256 防災情報</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&amp;display=swap">
   <style>
     * { box-sizing: border-box; }
@@ -147,7 +149,11 @@
 <body>
   <main class="stage" id="stage" aria-label="防災情報">
     <div class="marquee" id="marquee">
-      <div class="track" id="track"></div>
+      <div class="track" id="track">
+        <div class="seq">
+          <div class="item"><p class="msg is-none">警報・注意報は発表されていません</p></div>
+        </div>
+      </div>
     </div>
     <div class="badge is-none" id="badge">
       <span id="badge-icon"></span>
@@ -329,15 +335,35 @@
       track.style.animation = 'ticker ' + (lap / SPEED) + 's linear infinite';
     }
 
+    var CACHE_KEY = 'ticker-bosai-v1';
+
+    function pack(items, lines) {
+      return items.map(function (item) { return item.name + item.verb; }).join('\n') + '\n' + lines.join('\n');
+    }
+
+    function readCache() {
+      try {
+        var data = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (!data || !Array.isArray(data.items) || !Array.isArray(data.lines)) return null;
+        return data;
+      } catch (e) { return null; }
+    }
+
+    function writeCache(items, lines) {
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ items: items, lines: lines })); } catch (e) {}
+    }
+
     async function refresh() {
-      var items = [];
-      var lines = [];
-      try { items = await loadItems(); } catch (e) { items = []; }
-      try { lines = await loadWeatherLines(); } catch (e) { lines = []; }
-      var next = items.map(function (item) { return item.name + item.verb; }).join('\n') + '\n' + lines.join('\n');
+      var loaded = await Promise.all([
+        loadItems().catch(function () { return []; }),
+        loadWeatherLines().catch(function () { return []; })
+      ]);
+      var items = loaded[0];
+      var lines = loaded[1];
+      var next = pack(items, lines);
       if (next === signature && trackHasRows()) return;
       signature = next;
-      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      writeCache(items, lines);
       play(items, lines);
     }
 
@@ -346,6 +372,11 @@
     }
 
     document.getElementById('badge-icon').innerHTML = infoIcon();
+    var cached = readCache();
+    if (cached) {
+      signature = pack(cached.items, cached.lines);
+      play(cached.items, cached.lines);
+    }
     refresh();
     setInterval(refresh, 10 * 60 * 1000);
   </script>
