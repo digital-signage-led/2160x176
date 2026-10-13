@@ -331,7 +331,8 @@
       var stage = document.getElementById('stage');
       var portrait = isPortraitView();
       var mode = portrait ? 'portrait' : 'landscape';
-      var sw = portrait ? 1080 : STAGE;
+      /* 横長は枠の幅に合わせる。2160×176 も 1080×176 も縮小せず高さ 176 */
+      var sw = portrait ? 1080 : Math.max(FACE, Math.round(window.innerWidth));
       var sh = portrait ? 1920 : 176;
       var s = Math.min(window.innerWidth / sw, window.innerHeight / sh, 1);
       if (!isFinite(s) || s <= 0) s = 1;
