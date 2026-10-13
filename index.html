@@ -331,8 +331,9 @@
       var stage = document.getElementById('stage');
       var w = window.innerWidth;
       var h = window.innerHeight;
-      var portrait = h > w;
-      var signage = !portrait && h <= 240;
+      /* 高さ 280px 以下の横長だけ帯。それ以外は 1080×1920 の黄色い全面 */
+      var strip = h <= 280 && w > h;
+      var portrait = !strip;
       var mode = portrait ? 'portrait' : 'landscape';
       var sw;
       var sh;
@@ -341,16 +342,10 @@
         sw = 1080;
         sh = 1920;
         s = Math.min(w / sw, h / sh);
-      } else if (signage) {
-        /* 1080×176 や 2160×176 の枠。高さ 176 のまま、幅だけ枠に合わせる */
+      } else {
         sw = Math.max(FACE, Math.round(w));
         sh = 176;
         s = Math.min(w / sw, h / sh, 1);
-      } else {
-        /* 通常のブラウザ。2160×176 を画面の中に全部収める */
-        sw = STAGE;
-        sh = 176;
-        s = Math.min(w / sw, h / sh);
       }
       if (!isFinite(s) || s <= 0) s = 1;
       stage.classList.toggle('is-portrait', portrait);
