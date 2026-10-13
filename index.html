@@ -321,6 +321,7 @@
     var DIRS = ['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
 
     var layoutMode = '';
+    var layoutWidth = 0;
     var lastShow = null;
 
     function isPortraitView() {
@@ -331,9 +332,8 @@
       var stage = document.getElementById('stage');
       var w = window.innerWidth;
       var h = window.innerHeight;
-      /* 高さ 280px 以下の横長だけ帯。それ以外は 1080×1920 の黄色い全面 */
-      var strip = h <= 280 && w > h;
-      var portrait = !strip;
+      var portrait = h > w;
+      var signage = !portrait && h <= 240;
       var mode = portrait ? 'portrait' : 'landscape';
       var sw;
       var sh;
@@ -342,10 +342,16 @@
         sw = 1080;
         sh = 1920;
         s = Math.min(w / sw, h / sh);
-      } else {
+      } else if (signage) {
+        /* 1080×176 や 2160×176 の枠。高さ 176 のまま、幅だけ枠に合わせる */
         sw = Math.max(FACE, Math.round(w));
         sh = 176;
         s = Math.min(w / sw, h / sh, 1);
+      } else {
+        /* 通常のブラウザ。2160×176 を画面の中に全部収める */
+        sw = STAGE;
+        sh = 176;
+        s = Math.min(w / sw, h / sh);
       }
       if (!isFinite(s) || s <= 0) s = 1;
       stage.classList.toggle('is-portrait', portrait);
@@ -355,8 +361,10 @@
       stage.style.top = Math.max(0, Math.round((h - sh * s) / 2)) + 'px';
       stage.style.transformOrigin = '0 0';
       stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
-      var changed = layoutMode !== '' && layoutMode !== mode;
+      var viewW = portrait ? 1080 : Math.round(sw);
+      var changed = (layoutMode !== '' && layoutMode !== mode) || (layoutMode !== '' && viewW !== layoutWidth);
       layoutMode = mode;
+      layoutWidth = viewW;
       if (changed) {
         buildTrack();
         if (lastShow) show(lastShow.obs, lastShow.latest, lastShow.code);
@@ -412,8 +420,10 @@
 
     function buildTrack() {
       var lap = setWidth();
-      var portrait = document.getElementById('stage').classList.contains('is-portrait');
-      var copies = portrait ? 1 : (Math.ceil((STAGE + lap) / lap) + 1);
+      var stage = document.getElementById('stage');
+      var portrait = stage.classList.contains('is-portrait');
+      var viewW = portrait ? 1080 : (parseFloat(stage.style.width) || STAGE);
+      var copies = portrait ? 1 : (Math.ceil((viewW + lap) / lap) + 1);
       var html = '';
       for (var c = 0; c < copies; c++) {
         for (var i = 0; i < ORDER.length; i++) html += panelHtml(ORDER[i]);
