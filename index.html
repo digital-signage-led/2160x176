@@ -104,7 +104,7 @@
       overflow: hidden;
       white-space: nowrap;
     }
-    .num, .unit { min-width: 0; }
+    .num, .unit { flex: 0 0 auto; }
     .num {
       font-family: "Inter", sans-serif;
       font-weight: 800;
@@ -421,6 +421,7 @@
     };
     var DIRS = ['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
     var newsLine = '';
+    var newsOverview = '';
 
     var layoutMode = '';
     var layoutWidth = 0;
@@ -501,12 +502,12 @@
       if (type === 'weather') {
         body = '<img class="icon weather-icon" alt="" src="./assets/jma-weather/100.svg">';
       } else if (type === 'wdir') {
-        body = '<span class="dir dir-val"></span>';
+        body = '<span class="dir dir-val">--</span>';
       } else if (type === 'tmaxmin') {
         body = '<div class="range"><span class="hi tmax-val">--</span><span class="sep">/</span><span class="lo tmin-val">--</span><span class="unit">℃</span></div>';
       } else {
         var unit = { temp: '℃', rain: 'mm', wind: 'm/s', humi: '%', pres: 'hPa', gust: 'm/s' }[type];
-        body = '<div class="val"><span class="num ' + type + '-val"></span><span class="unit">' + unit + '</span></div>';
+        body = '<div class="val"><span class="num ' + type + '-val">--</span><span class="unit">' + unit + '</span></div>';
       }
       return '<section class="col" data-type="' + type + '">' +
         '<div class="top"><span class="label">' + LABELS[type] + '</span></div>' +
@@ -537,8 +538,10 @@
       var copies = portrait ? 1 : 2;
       var html = '';
       for (var c = 0; c < copies; c++) {
-        for (var i = 0; i < ORDER.length; i++) html += panelHtml(ORDER[i]);
-        if (!portrait) html += newsHtml();
+        for (var i = 0; i < ORDER.length; i++) {
+          html += panelHtml(ORDER[i]);
+          if (!portrait && ORDER[i] === 'rain') html += newsHtml();
+        }
       }
       var track = document.getElementById('track');
       track.innerHTML = html;
@@ -581,6 +584,8 @@
     }
 
     function fitText() {
+      var track = document.getElementById('track');
+      if (track) track.style.animation = 'none';
       var portrait = document.getElementById('stage').classList.contains('is-portrait');
       var labelStart = portrait ? 72 : 48;
       var labelMin = portrait ? 28 : 20;
@@ -607,7 +612,7 @@
           if (unit) unit.style.fontSize = Math.max(portrait ? 36 : 36, Math.round(n * 0.42)) + 'px';
         }
         apply(size);
-        while (size > numMin && wrap.scrollWidth > numCap) {
+        while (size > numMin && wrap.scrollWidth > numCap && wrap.scrollWidth > 0) {
           size -= 1;
           apply(size);
         }
@@ -651,6 +656,25 @@
       if (lap > 0) track.dataset.lap = String(Math.round(lap));
       groupFeet();
       startScroll();
+    }
+
+    function oneDecimal(value) {
+      var n = Number(value);
+      if (!isFinite(n)) return '';
+      return n.toFixed(1);
+    }
+
+    function decimalNews(obs) {
+      if (!obs) return '';
+      var bits = [];
+      var rain = oneDecimal(fieldValue(obs.precipitation10m));
+      var wind = oneDecimal(fieldValue(obs.wind));
+      var gust = oneDecimal(fieldValue(obs.gust));
+      if (rain) bits.push('降水量は' + rain + 'ミリ');
+      if (wind) bits.push('風速は' + wind + 'メートル');
+      if (gust) bits.push('最大瞬間風速は' + gust + 'メートル');
+      if (!bits.length) return '';
+      return bits.join('、') + '。';
     }
 
     async function loadNewsLine() {
@@ -830,13 +854,39 @@
       };
     }
 
+    function tokyoYmd(date) {
+      var parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hourCycle: 'h23'
+      }).formatToParts(date);
+      var bag = {};
+      parts.forEach(function (x) { bag[x.type] = x.value; });
+      return bag.year + bag.month + bag.day;
+    }
+
+    function obsTime(key, fallback) {
+      if (key && /^\d{14}$/.test(key)) {
+        return new Date(key.slice(0, 4) + '-' + key.slice(4, 6) + '-' + key.slice(6, 8) + 'T' + key.slice(8, 10) + ':' + key.slice(10, 12) + ':' + key.slice(12, 14) + '+09:00');
+      }
+      return fallback;
+    }
+
+    function usableObs(rec) {
+      return !!(rec && fieldValue(rec.temp) != null);
+    }
+
     function pickObs(data, exactKey) {
-      if (data && data.temp) return data;
+      if (data && (data.temp || data.pressure || data.humidity)) {
+        if (!usableObs(data)) throw new Error('観測値が空');
+        return { obs: data, key: exactKey };
+      }
       var keys = Object.keys(data || {}).filter(function (k) { return /^\d{14}$/.test(k); }).sort();
       if (!keys.length) throw new Error('観測JSONの形式が不明');
-      if (data[exactKey]) return data[exactKey];
-      var older = keys.filter(function (k) { return k <= exactKey; });
-      return data[older.length ? older[older.length - 1] : keys[keys.length - 1]];
+      var older = keys.filter(function (k) { return !exactKey || k <= exactKey; });
+      var order = older.length ? older : keys;
+      for (var i = order.length - 1; i >= 0; i--) {
+        if (usableObs(data[order[i]])) return { obs: data[order[i]], key: order[i] };
+      }
+      throw new Error('有効な観測なし');
     }
 
     async function fetchJson(url) {
@@ -851,31 +901,28 @@
       var iso = (await timeRes.text()).trim();
       if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(iso)) iso = iso.replace(/\.\d+$/, '') + '+09:00';
       var latest = new Date(iso);
-      var p = jstParts(latest);
-      var ymd = String(latest.getFullYear());
-      var parts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hourCycle: 'h23'
-      }).formatToParts(latest);
-      var bag = {};
-      parts.forEach(function (x) { bag[x.type] = x.value; });
-      ymd = bag.year + bag.month + bag.day;
-      var hhmm = p.hour + p.minute;
-      var exactKey = ymd + hhmm + '00';
-      var blockH = String(Math.floor(Number(p.hour) / 3) * 3).padStart(2, '0');
-      var urls = [
-        'https://www.jma.go.jp/bosai/amedas/data/point/' + SITE.amedas + '/' + ymd + '_' + blockH + '.json',
-        'https://www.jma.go.jp/bosai/amedas/data/map/' + ymd + hhmm + '00.json'
-      ];
+      if (isNaN(latest.getTime())) throw new Error('時刻が不正');
       var lastErr = null;
-      for (var i = 0; i < urls.length; i++) {
-        try {
-          var data = await fetchJson(urls[i]);
-          if (i === 1) {
-            if (!data[SITE.amedas]) throw new Error('地点なし');
-            return { obs: data[SITE.amedas], latest: latest };
-          }
-          return { obs: pickObs(data, exactKey), latest: latest };
-        } catch (e) { lastErr = e; }
+      var tried = {};
+      for (var back = 0; back <= 30; back += 10) {
+        var t = new Date(latest.getTime() - back * 60000);
+        var p = jstParts(t);
+        var ymd = tokyoYmd(t);
+        var blockH = String(Math.floor(Number(p.hour) / 3) * 3).padStart(2, '0');
+        var exactKey = ymd + p.hour + p.minute + '00';
+        var jobs = [
+          { url: 'https://www.jma.go.jp/bosai/amedas/data/point/' + SITE.amedas + '/' + ymd + '_' + blockH + '.json', map: false },
+          { url: 'https://www.jma.go.jp/bosai/amedas/data/map/' + exactKey + '.json', map: true }
+        ];
+        for (var i = 0; i < jobs.length; i++) {
+          if (tried[jobs[i].url]) continue;
+          tried[jobs[i].url] = true;
+          try {
+            var data = await fetchJson(jobs[i].url);
+            var picked = jobs[i].map ? pickObs(data[SITE.amedas], exactKey) : pickObs(data, exactKey);
+            return { obs: picked.obs, latest: obsTime(picked.key, t) };
+          } catch (e) { lastErr = e; }
+        }
       }
       throw lastErr || new Error('アメダス取得失敗');
     }
@@ -923,6 +970,7 @@
       var src = forecastCode != null ? iconForCode(forecastCode) : iconFromObs(obs);
       document.querySelectorAll('.weather-icon').forEach(function (el) { el.src = src; });
       setFootParts(when);
+      newsLine = (decimalNews(obs) + (newsOverview ? '　' + newsOverview : '')).trim();
       paint(temp);
       fitText();
     }
@@ -1120,10 +1168,11 @@
         var loaded = await loadAmedas();
         var code = null;
         try { code = await loadForecastCode(); } catch (e) { code = null; }
-        try { newsLine = await loadNewsLine(); } catch (e) { newsLine = newsLine || ''; }
+        try { newsOverview = await loadNewsLine(); } catch (e) { newsOverview = newsOverview || ''; }
         show(loaded.obs, loaded.latest, code);
         refreshTelop(loaded.obs);
       } catch (e) {
+        if (lastShow) return;
         paint(null);
         ['temp', 'rain', 'wind', 'humi', 'pres', 'gust'].forEach(function (k) { setAll('.' + k + '-val', '--'); });
         setAll('.dir-val', '--');
