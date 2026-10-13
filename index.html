@@ -2,17 +2,17 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>2160×176 気象 - 大阪市</title>
+  <meta name="viewport" content="width=2160, initial-scale=1">
+  <title>2160×256 気象 - 大阪市</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&family=Noto+Sans+JP:wght@700;800&display=swap">
   <style>
     :root {
       --stage-w: 2160px;
-      --stage-h: 176px;
+      --stage-h: 256px;
       --face-w: 128px;
-      --top-h: 40px;
-      --body-h: 96px;
-      --foot-h: 40px;
+      --top-h: 56px;
+      --body-h: 144px;
+      --foot-h: 56px;
       --foot-bg: #fff9f0;
     }
     * { box-sizing: border-box; }
@@ -43,7 +43,7 @@
     .track {
       display: flex;
       flex-direction: row;
-      height: 176px;
+      height: 256px;
       width: max-content;
       transform-origin: 0 0;
       will-change: transform;
@@ -52,7 +52,7 @@
       position: relative;
       width: var(--face-w);
       flex: 0 0 var(--face-w);
-      height: 176px;
+      height: 256px;
       display: flex;
       flex-direction: column;
       overflow: visible;
@@ -70,7 +70,7 @@
     .label {
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 700;
-      font-size: 34px;
+      font-size: 42px;
       line-height: 1;
       letter-spacing: 0;
       color: #000;
@@ -104,21 +104,21 @@
     .num {
       font-family: "Inter", sans-serif;
       font-weight: 800;
-      font-size: 64px;
+      font-size: 86px;
       line-height: 1;
       color: #000;
     }
     .unit {
       font-family: "Inter", sans-serif;
       font-weight: 600;
-      font-size: 28px;
+      font-size: 36px;
       line-height: 1;
       color: #000;
     }
     .dir {
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 800;
-      font-size: 56px;
+      font-size: 72px;
       line-height: 1;
       color: #000;
       min-width: 0;
@@ -128,8 +128,8 @@
       text-align: center;
     }
     .icon {
-      width: 100px;
-      height: 68px;
+      width: 116px;
+      height: 100px;
       background: #fff;
       border-radius: 8px;
       object-fit: contain;
@@ -151,14 +151,14 @@
     .hi, .lo, .sep {
       font-family: "Inter", sans-serif;
       font-weight: 800;
-      font-size: 52px;
+      font-size: 68px;
       line-height: 1;
     }
     .hi { color: #e02020; }
     .lo { color: #2060e0; }
     .sep { color: #1a1a1a; }
     .range .unit {
-      font-size: 24px;
+      font-size: 32px;
       font-weight: 700;
       color: #1a1a1a;
     }
@@ -191,8 +191,8 @@
       text-align: center;
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 700;
-      font-size: 26px;
-      line-height: 40px;
+      font-size: 34px;
+      line-height: 56px;
       color: #1a1a1a;
       letter-spacing: 0;
     }
@@ -205,13 +205,23 @@
     .foot-piece {
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 700;
-      font-size: 32px;
-      line-height: 40px;
+      font-size: 36px;
+      line-height: 56px;
       color: #1a1a1a;
       white-space: nowrap;
     }
     .board-foot {
-      display: none;
+      display: flex;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 4;
+      height: var(--foot-h);
+      align-items: center;
+      justify-content: center;
+      background: var(--foot-bg);
+      overflow: hidden;
     }
     .stage.is-light .label,
     .stage.is-light .num,
@@ -276,17 +286,9 @@
     .stage.is-portrait .sep { font-size: 132px; }
     .stage.is-portrait .range .unit { font-size: 56px; }
     .stage.is-portrait .board-foot {
-      display: flex;
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      z-index: 3;
       width: 1080px;
+      right: auto;
       height: 168px;
-      align-items: center;
-      justify-content: center;
-      background: var(--foot-bg);
-      overflow: hidden;
     }
     .stage.is-portrait .board-foot .foot-txt {
       max-width: none;
@@ -334,7 +336,8 @@
       var stage = document.getElementById('stage');
       var w = window.innerWidth;
       var h = window.innerHeight;
-      var portrait = h > w;
+      /* 上下の帯は横長。画面全体の縦画面だけ 3列 */
+      var portrait = h > w && h >= 800 && w < 1600;
       var mode = portrait ? 'portrait' : 'landscape';
       var sw;
       var sh;
@@ -344,20 +347,20 @@
         sh = 1920;
         s = Math.min(w / sw, h / sh);
       } else {
-        /* 横長は画面の幅いっぱいに列を置き、高さ 176 が収まるようにする */
-        sw = Math.max(FACE, Math.round(w));
-        sh = 176;
-        s = Math.min(1, h / sh);
+        /* サイネージの帯は幅 2160。枠が小さいときだけ縮小して、右端で切らない */
+        sw = STAGE;
+        sh = 256;
+        s = Math.min(w / sw, h / sh);
       }
       if (!isFinite(s) || s <= 0) s = 1;
       stage.classList.toggle('is-portrait', portrait);
       stage.style.width = sw + 'px';
       stage.style.height = sh + 'px';
-      stage.style.left = portrait ? Math.max(0, Math.round((w - sw * s) / 2)) + 'px' : '0px';
+      stage.style.left = Math.max(0, Math.round((w - sw * s) / 2)) + 'px';
       stage.style.top = Math.max(0, Math.round((h - sh * s) / 2)) + 'px';
       stage.style.transformOrigin = '0 0';
       stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
-      var viewW = portrait ? 1080 : Math.round(sw);
+      var viewW = portrait ? 1080 : STAGE;
       var changed = (layoutMode !== '' && layoutMode !== mode) || (layoutMode !== '' && viewW !== layoutWidth);
       layoutMode = mode;
       layoutWidth = viewW;
@@ -464,16 +467,16 @@
 
     function fitText() {
       var portrait = document.getElementById('stage').classList.contains('is-portrait');
-      var labelStart = portrait ? 72 : 34;
+      var labelStart = portrait ? 72 : 42;
       var labelMin = portrait ? 28 : 12;
       var labelCap = portrait ? 340 : 120;
-      var dirStart = portrait ? 148 : 56;
+      var dirStart = portrait ? 148 : 72;
       var dirMin = portrait ? 64 : 32;
       var dirCap = portrait ? 340 : 124;
-      var numStart = portrait ? 200 : 64;
+      var numStart = portrait ? 200 : 86;
       var numMin = portrait ? 72 : 36;
       var numCap = portrait ? 340 : 124;
-      var rangeStart = portrait ? 132 : 52;
+      var rangeStart = portrait ? 132 : 68;
       var rangeMin = portrait ? 56 : 32;
       var rangeCap = portrait ? 340 : 124;
       document.querySelectorAll('.label').forEach(function (el) { shrink(el, labelStart, labelMin, labelCap); });
@@ -486,7 +489,7 @@
         var size = numStart;
         function apply(n) {
           num.style.fontSize = n + 'px';
-          if (unit) unit.style.fontSize = Math.max(portrait ? 36 : 20, Math.round(n * 0.44)) + 'px';
+          if (unit) unit.style.fontSize = Math.max(portrait ? 36 : 28, Math.round(n * 0.44)) + 'px';
         }
         apply(size);
         while (size > numMin && wrap.scrollWidth > numCap) {
@@ -505,7 +508,7 @@
           [hi, lo, sep].forEach(function (el) { if (el) el.style.fontSize = size + 'px'; });
         }
         var unit = card.querySelector('.unit');
-        if (unit) unit.style.fontSize = Math.max(portrait ? 32 : 18, Math.round(size * 0.46)) + 'px';
+        if (unit) unit.style.fontSize = Math.max(portrait ? 32 : 24, Math.round(size * 0.46)) + 'px';
       });
     }
 
@@ -531,22 +534,19 @@
         txt.appendChild(piece);
       });
       bar.appendChild(txt);
-      var size = 48;
+      var cap = bar.clientWidth > 40 ? bar.clientWidth - 12 : 1040;
+      var size = cap > 800 ? 36 : 24;
       var pieces = txt.querySelectorAll('.foot-piece');
       pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
-      while (size > 28 && txt.scrollWidth > 1040) {
+      while (size > 10 && txt.scrollWidth > cap) {
         size -= 1;
         pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
       }
     }
 
     function groupFeet() {
-      if (document.getElementById('stage').classList.contains('is-portrait')) {
-        fillBoardFoot();
-        return;
-      }
-      var bar = document.getElementById('board-foot');
-      if (bar) bar.innerHTML = '';
+      fillBoardFoot();
+      if (document.getElementById('stage').classList.contains('is-portrait')) return;
       var cols = Array.prototype.slice.call(document.querySelectorAll('#track > .col'));
       cols.forEach(function (col) {
         var foot = col.querySelector('.foot');
