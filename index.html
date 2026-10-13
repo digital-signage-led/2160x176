@@ -9,7 +9,7 @@
     :root {
       --stage-w: 2160px;
       --stage-h: 256px;
-      --face-w: 128px;
+      --face-w: 240px;
       --top-h: 56px;
       --body-h: 144px;
       --foot-h: 56px;
@@ -46,7 +46,11 @@
       height: 256px;
       width: max-content;
       transform-origin: 0 0;
-      will-change: transform;
+      backface-visibility: hidden;
+    }
+    @keyframes ticker {
+      from { transform: translate3d(0, 0, 0); }
+      to { transform: translate3d(var(--lap-shift, -2160px), 0, 0); }
     }
     .col {
       position: relative;
@@ -55,7 +59,7 @@
       height: 256px;
       display: flex;
       flex-direction: column;
-      overflow: visible;
+      overflow: hidden;
     }
     .top {
       height: var(--top-h);
@@ -70,7 +74,7 @@
     .label {
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 700;
-      font-size: 42px;
+      font-size: 48px;
       line-height: 1;
       letter-spacing: 0;
       color: #000;
@@ -104,21 +108,21 @@
     .num {
       font-family: "Inter", sans-serif;
       font-weight: 800;
-      font-size: 86px;
+      font-size: 120px;
       line-height: 1;
       color: #000;
     }
     .unit {
       font-family: "Inter", sans-serif;
       font-weight: 600;
-      font-size: 36px;
+      font-size: 52px;
       line-height: 1;
       color: #000;
     }
     .dir {
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 800;
-      font-size: 72px;
+      font-size: 100px;
       line-height: 1;
       color: #000;
       min-width: 0;
@@ -128,8 +132,8 @@
       text-align: center;
     }
     .icon {
-      width: 116px;
-      height: 100px;
+      width: 200px;
+      height: 120px;
       background: #fff;
       border-radius: 8px;
       object-fit: contain;
@@ -143,7 +147,7 @@
       padding: 2px 4px 3px;
       background: #fff;
       border-radius: 8px;
-      max-width: 124px;
+      max-width: 228px;
       overflow: hidden;
       white-space: nowrap;
       line-height: 1;
@@ -151,14 +155,14 @@
     .hi, .lo, .sep {
       font-family: "Inter", sans-serif;
       font-weight: 800;
-      font-size: 68px;
+      font-size: 96px;
       line-height: 1;
     }
     .hi { color: #e02020; }
     .lo { color: #2060e0; }
     .sep { color: #1a1a1a; }
     .range .unit {
-      font-size: 32px;
+      font-size: 44px;
       font-weight: 700;
       color: #1a1a1a;
     }
@@ -185,13 +189,13 @@
     .foot-txt {
       display: block;
       width: 100%;
-      max-width: 124px;
+      max-width: none;
       overflow: hidden;
       white-space: nowrap;
       text-align: center;
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 700;
-      font-size: 34px;
+      font-size: 48px;
       line-height: 56px;
       color: #1a1a1a;
       letter-spacing: 0;
@@ -205,7 +209,7 @@
     .foot-piece {
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 700;
-      font-size: 36px;
+      font-size: 48px;
       line-height: 56px;
       color: #1a1a1a;
       white-space: nowrap;
@@ -307,13 +311,13 @@
   </main>
   <script src="./assets/jma-weather-icons.js"></script>
   <script>
-    /* 大阪市。アメダス「大阪」(62078)。面幅は 128px */
+    /* 大阪市。アメダス「大阪」(62078)。面幅は 240px */
     var SITE = {
       label: '大阪市',
       amedas: '62078',
       forecastArea: '270000'
     };
-    var FACE = 128;
+    var FACE = 240;
     var STAGE = 2160;
     var SCROLL_PX = 0.9;
     /* 1周して左へ流れ続ける */
@@ -350,7 +354,8 @@
         /* サイネージの帯は幅 2160。枠が小さいときだけ縮小して、右端で切らない */
         sw = STAGE;
         sh = 256;
-        s = Math.min(w / sw, h / sh);
+        /* 4Kへ拡大するとスクロールがカクつくので、2160のまま置く */
+        s = Math.min(1, w / sw, h / sh);
       }
       if (!isFinite(s) || s <= 0) s = 1;
       stage.classList.toggle('is-portrait', portrait);
@@ -422,7 +427,7 @@
       var stage = document.getElementById('stage');
       var portrait = stage.classList.contains('is-portrait');
       var viewW = portrait ? 1080 : (parseFloat(stage.style.width) || STAGE);
-      var copies = portrait ? 1 : (Math.ceil((viewW + lap) / lap) + 1);
+      var copies = portrait ? 1 : 2;
       var html = '';
       for (var c = 0; c < copies; c++) {
         for (var i = 0; i < ORDER.length; i++) html += panelHtml(ORDER[i]);
@@ -430,26 +435,28 @@
       var track = document.getElementById('track');
       track.innerHTML = html;
       track.dataset.lap = String(lap);
+      startScroll();
     }
 
     function startScroll() {
-      var start = performance.now();
-      function frame(now) {
-        var track = document.getElementById('track');
-        var stage = document.getElementById('stage');
-        if (stage.classList.contains('is-portrait')) {
-          track.style.transform = 'none';
-        } else {
-          var lap = Number(track.dataset.lap) || setWidth();
-          if (lap > 0) {
-            var dist = (now - start) * 0.05;
-            var x = -(dist % lap);
-            track.style.transform = 'translate3d(' + x + 'px,0,0)';
-          }
-        }
-        requestAnimationFrame(frame);
+      var track = document.getElementById('track');
+      var stage = document.getElementById('stage');
+      var lap = Number(track.dataset.lap) || setWidth();
+      if (stage.classList.contains('is-portrait') || lap <= 0) {
+        track.style.animation = 'none';
+        return;
       }
-      requestAnimationFrame(frame);
+      /* 文字を毎フレーム描き直さず、帯を1周ぶんだけ滑らせる */
+      var sheet = document.getElementById('ticker-style');
+      if (!sheet) {
+        sheet = document.createElement('style');
+        sheet.id = 'ticker-style';
+        document.head.appendChild(sheet);
+      }
+      sheet.textContent = '@keyframes ticker{from{transform:translate3d(0,0,0)}to{transform:translate3d(-' + lap + 'px,0,0)}}';
+      track.style.animation = 'none';
+      void track.offsetWidth;
+      track.style.animation = 'ticker ' + (lap / 50) + 's linear infinite';
     }
 
     function shrink(el, start, min, limit) {
@@ -467,18 +474,18 @@
 
     function fitText() {
       var portrait = document.getElementById('stage').classList.contains('is-portrait');
-      var labelStart = portrait ? 72 : 42;
-      var labelMin = portrait ? 28 : 12;
-      var labelCap = portrait ? 340 : 120;
-      var dirStart = portrait ? 148 : 72;
-      var dirMin = portrait ? 64 : 32;
-      var dirCap = portrait ? 340 : 124;
-      var numStart = portrait ? 200 : 86;
-      var numMin = portrait ? 72 : 36;
-      var numCap = portrait ? 340 : 124;
-      var rangeStart = portrait ? 132 : 68;
-      var rangeMin = portrait ? 56 : 32;
-      var rangeCap = portrait ? 340 : 124;
+      var labelStart = portrait ? 72 : 48;
+      var labelMin = portrait ? 28 : 20;
+      var labelCap = portrait ? 340 : 224;
+      var dirStart = portrait ? 148 : 100;
+      var dirMin = portrait ? 64 : 40;
+      var dirCap = portrait ? 340 : 224;
+      var numStart = portrait ? 200 : 120;
+      var numMin = portrait ? 72 : 48;
+      var numCap = portrait ? 340 : 224;
+      var rangeStart = portrait ? 132 : 96;
+      var rangeMin = portrait ? 56 : 40;
+      var rangeCap = portrait ? 340 : 224;
       document.querySelectorAll('.label').forEach(function (el) { shrink(el, labelStart, labelMin, labelCap); });
       document.querySelectorAll('.dir-val').forEach(function (el) { shrink(el, dirStart, dirMin, dirCap); });
       groupFeet();
@@ -489,7 +496,7 @@
         var size = numStart;
         function apply(n) {
           num.style.fontSize = n + 'px';
-          if (unit) unit.style.fontSize = Math.max(portrait ? 36 : 28, Math.round(n * 0.44)) + 'px';
+          if (unit) unit.style.fontSize = Math.max(portrait ? 36 : 36, Math.round(n * 0.42)) + 'px';
         }
         apply(size);
         while (size > numMin && wrap.scrollWidth > numCap) {
@@ -508,7 +515,7 @@
           [hi, lo, sep].forEach(function (el) { if (el) el.style.fontSize = size + 'px'; });
         }
         var unit = card.querySelector('.unit');
-        if (unit) unit.style.fontSize = Math.max(portrait ? 32 : 24, Math.round(size * 0.46)) + 'px';
+        if (unit) unit.style.fontSize = Math.max(portrait ? 32 : 32, Math.round(size * 0.46)) + 'px';
       });
     }
 
@@ -535,7 +542,7 @@
       });
       bar.appendChild(txt);
       var cap = bar.clientWidth > 40 ? bar.clientWidth - 12 : 1040;
-      var size = cap > 800 ? 36 : 24;
+      var size = cap > 800 ? 48 : 32;
       var pieces = txt.querySelectorAll('.foot-piece');
       pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
       while (size > 10 && txt.scrollWidth > cap) {
@@ -546,7 +553,7 @@
 
     function groupFeet() {
       fillBoardFoot();
-      if (document.getElementById('stage').classList.contains('is-portrait')) return;
+      if (!document.getElementById('stage').classList.contains('is-portrait')) return;
       var cols = Array.prototype.slice.call(document.querySelectorAll('#track > .col'));
       cols.forEach(function (col) {
         var foot = col.querySelector('.foot');
@@ -576,10 +583,10 @@
           piece.textContent = part;
           txt.appendChild(piece);
         });
-        var size = 32;
+        var size = 48;
         var pieces = txt.querySelectorAll('.foot-piece');
         pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
-        while (size > 18 && txt.scrollWidth > width - 16) {
+        while (size > 28 && txt.scrollWidth > width - 16) {
           size -= 1;
           pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
         }
