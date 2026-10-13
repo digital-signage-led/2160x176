@@ -95,10 +95,12 @@
       align-items: baseline;
       justify-content: center;
       gap: 1px;
-      max-width: 124px;
+      max-width: 100%;
+      min-width: 0;
       overflow: hidden;
       white-space: nowrap;
     }
+    .num, .unit { min-width: 0; }
     .num {
       font-family: "Inter", sans-serif;
       font-weight: 800;
@@ -333,7 +335,6 @@
       var w = window.innerWidth;
       var h = window.innerHeight;
       var portrait = h > w;
-      var signage = !portrait && h <= 240;
       var mode = portrait ? 'portrait' : 'landscape';
       var sw;
       var sh;
@@ -342,22 +343,17 @@
         sw = 1080;
         sh = 1920;
         s = Math.min(w / sw, h / sh);
-      } else if (signage) {
-        /* 1080×176 や 2160×176 の枠。高さ 176 のまま、幅だけ枠に合わせる */
+      } else {
+        /* 横長は画面の幅いっぱいに列を置き、高さ 176 が収まるようにする */
         sw = Math.max(FACE, Math.round(w));
         sh = 176;
-        s = Math.min(w / sw, h / sh, 1);
-      } else {
-        /* 通常のブラウザ。2160×176 を画面の中に全部収める */
-        sw = STAGE;
-        sh = 176;
-        s = Math.min(w / sw, h / sh);
+        s = Math.min(1, h / sh);
       }
       if (!isFinite(s) || s <= 0) s = 1;
       stage.classList.toggle('is-portrait', portrait);
       stage.style.width = sw + 'px';
       stage.style.height = sh + 'px';
-      stage.style.left = Math.max(0, Math.round((w - sw * s) / 2)) + 'px';
+      stage.style.left = portrait ? Math.max(0, Math.round((w - sw * s) / 2)) + 'px' : '0px';
       stage.style.top = Math.max(0, Math.round((h - sh * s) / 2)) + 'px';
       stage.style.transformOrigin = '0 0';
       stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
@@ -434,18 +430,19 @@
     }
 
     function startScroll() {
-      var x = 0;
-      function frame() {
+      var start = performance.now();
+      function frame(now) {
         var track = document.getElementById('track');
         var stage = document.getElementById('stage');
         if (stage.classList.contains('is-portrait')) {
-          x = 0;
           track.style.transform = 'none';
         } else {
           var lap = Number(track.dataset.lap) || setWidth();
-          x -= SCROLL_PX;
-          if (x <= -lap) x += lap;
-          track.style.transform = 'translate3d(' + Math.round(x) + 'px,0,0)';
+          if (lap > 0) {
+            var dist = (now - start) * 0.05;
+            var x = -(dist % lap);
+            track.style.transform = 'translate3d(' + x + 'px,0,0)';
+          }
         }
         requestAnimationFrame(frame);
       }
