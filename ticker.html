@@ -31,6 +31,14 @@
       width: max-content;
       backface-visibility: hidden;
     }
+    .seq {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      height: 256px;
+      width: max-content;
+      flex: 0 0 auto;
+    }
     .card {
       flex: 0 0 2160px;
       width: 2160px;
@@ -102,6 +110,20 @@
     .note svg { width: 100px; height: 100px; flex: 0 0 auto; }
     .card.is-none .rule,
     .card.is-none .note { display: none; }
+    .wx {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      height: 256px;
+      margin: 0;
+      padding: 0 72px;
+      white-space: nowrap;
+      font-family: "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+      font-weight: 700;
+      font-size: 96px;
+      line-height: 1;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -208,18 +230,42 @@
       return found;
     }
 
-    function play(items) {
+    function linesOf(text) {
+      return String(text || '').split(/\n+/).map(function (line) {
+        return line.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '');
+      }).filter(function (line) { return line.length > 0; });
+    }
+
+    async function loadWeatherLines() {
+      var overview = await fetchJson('https://www.jma.go.jp/bosai/forecast/data/overview_forecast/' + AREA + '.json');
+      var lines = [];
+      linesOf(overview && overview.headlineText).forEach(function (line) { lines.push(line); });
+      linesOf(overview && overview.text).forEach(function (line) { lines.push(line); });
+      return lines;
+    }
+
+    function play(items, lines) {
       var track = document.getElementById('track');
-      var html = '';
-      if (!items.length) html = cardHtml(null);
-      else items.forEach(function (item) { html += cardHtml(item); });
-      if (items.length > 1) html += html;
-      track.innerHTML = html;
+      track.innerHTML = '';
+      var seq = document.createElement('div');
+      seq.className = 'seq';
+      if (!items.length) seq.insertAdjacentHTML('beforeend', cardHtml(null));
+      else items.forEach(function (item) { seq.insertAdjacentHTML('beforeend', cardHtml(item)); });
+      lines.forEach(function (line) {
+        var row = document.createElement('p');
+        row.className = 'wx';
+        row.textContent = line;
+        seq.appendChild(row);
+      });
+      track.appendChild(seq);
+      var clone = seq.cloneNode(true);
+      clone.setAttribute('aria-hidden', 'true');
+      track.appendChild(clone);
       track.style.animation = 'none';
       track.style.transform = 'none';
-      if (items.length < 2) return;
       void track.offsetWidth;
-      var lap = 2160 * items.length;
+      var lap = Math.round(seq.getBoundingClientRect().width);
+      if (!(lap > 0)) return;
       var sheet = document.getElementById('ticker-style');
       if (!sheet) {
         sheet = document.createElement('style');
@@ -232,12 +278,14 @@
 
     async function refresh() {
       var items = [];
+      var lines = [];
       try { items = await loadItems(); } catch (e) { items = []; }
-      var next = items.map(function (item) { return item.name + item.verb; }).join('\n');
+      try { lines = await loadWeatherLines(); } catch (e) { lines = []; }
+      var next = items.map(function (item) { return item.name + item.verb; }).join('\n') + '\n' + lines.join('\n');
       if (next === signature && trackHasCards()) return;
       signature = next;
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
-      play(items);
+      play(items, lines);
     }
 
     function trackHasCards() {
