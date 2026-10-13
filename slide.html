@@ -11,8 +11,8 @@
       --stage-h: 256px;
       --face-w: 240px;
       --top-h: 56px;
-      --body-h: 200px;
-      --foot-h: 0px;
+      --body-h: 144px;
+      --foot-h: 56px;
       --foot-bg: #fff9f0;
     }
     * { box-sizing: border-box; }
@@ -161,7 +161,7 @@
       color: #1a1a1a;
     }
     .foot {
-      display: none;
+      display: flex;
       height: var(--foot-h);
       flex: 0 0 var(--foot-h);
       align-items: center;
@@ -283,7 +283,7 @@
     .stage.is-portrait .sep { font-size: 132px; }
     .stage.is-portrait .range .unit { font-size: 56px; }
     .stage.is-portrait .board-foot {
-      display: none;
+      display: flex;
       width: 1080px;
       right: auto;
       height: 168px;
