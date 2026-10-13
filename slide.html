@@ -39,18 +39,16 @@
       overflow: hidden;
       background: #FFEE00;
       transform-origin: 0 0;
+      visibility: hidden;
     }
+    .stage.is-ready { visibility: visible; }
     .track {
       display: flex;
       flex-direction: row;
       height: 256px;
       width: max-content;
       transform-origin: 0 0;
-      backface-visibility: hidden;
-    }
-    @keyframes ticker {
-      from { transform: translate3d(0, 0, 0); }
-      to { transform: translate3d(var(--lap-shift, -2160px), 0, 0); }
+      will-change: transform;
     }
     .col {
       position: relative;
@@ -69,7 +67,7 @@
       justify-content: center;
       background: #FFF44D;
       padding: 0 2px;
-      overflow: hidden;
+      overflow: visible;
     }
     .label {
       font-family: "Noto Sans JP", sans-serif;
@@ -82,7 +80,6 @@
       text-align: center;
       min-width: 0;
       max-width: none;
-      overflow: hidden;
     }
     .body {
       height: var(--body-h);
@@ -92,7 +89,7 @@
       justify-content: center;
       background: #FFEE00;
       padding: 0 2px;
-      overflow: hidden;
+      overflow: visible;
     }
     .val {
       display: flex;
@@ -101,7 +98,6 @@
       gap: 1px;
       max-width: 100%;
       min-width: 0;
-      overflow: hidden;
       white-space: nowrap;
     }
     .num, .unit { min-width: 0; }
@@ -127,7 +123,6 @@
       color: #000;
       min-width: 0;
       max-width: none;
-      overflow: hidden;
       white-space: nowrap;
       text-align: center;
     }
@@ -148,7 +143,6 @@
       background: #fff;
       border-radius: 8px;
       max-width: 228px;
-      overflow: hidden;
       white-space: nowrap;
       line-height: 1;
     }
@@ -174,7 +168,7 @@
       justify-content: center;
       background: var(--foot-bg);
       padding: 0 3px;
-      overflow: hidden;
+      overflow: visible;
     }
     .foot.is-span {
       position: absolute;
@@ -190,7 +184,6 @@
       display: block;
       width: 100%;
       max-width: none;
-      overflow: hidden;
       white-space: nowrap;
       text-align: center;
       font-family: "Noto Sans JP", sans-serif;
@@ -320,7 +313,7 @@
     };
     var FACE = 240;
     var STAGE = 2160;
-    var SCROLL_PX = 0.9;
+    var SCROLL_SPEED = 50;
     /* 1周して左へ流れ続ける */
     var ORDER = ['weather', 'temp', 'rain', 'wdir', 'wind', 'humi', 'pres', 'tmaxmin', 'gust'];
     var LABELS = {
@@ -410,19 +403,30 @@
       }
       var track = document.getElementById('track');
       track.innerHTML = html;
-      track.dataset.lap = String(lap);
+      track.dataset.lap = String(measureLap() || lap);
       startScroll();
+    }
+
+    function measureLap() {
+      var cols = document.querySelectorAll('#track > .col');
+      var n = ORDER.length;
+      if (cols.length < n) return setWidth();
+      var lap = 0;
+      for (var i = 0; i < n; i++) lap += cols[i].offsetWidth;
+      return lap > 0 ? lap : setWidth();
     }
 
     function startScroll() {
       var track = document.getElementById('track');
       var stage = document.getElementById('stage');
       var lap = Number(track.dataset.lap) || setWidth();
-      if (lap <= 0) {
+      if (stage.classList.contains('is-portrait') || lap <= 0) {
         track.style.animation = 'none';
+        delete track.dataset.scrolling;
         return;
       }
-      /* 文字を毎フレーム描き直さず、帯を1周ぶんだけ滑らせる */
+      /* すでに同じ周長で流しているときは、更新で止めたり先頭へ戻したりしない */
+      if (track.dataset.scrolling === String(lap)) return;
       var sheet = document.getElementById('ticker-style');
       if (!sheet) {
         sheet = document.createElement('style');
@@ -430,9 +434,8 @@
         document.head.appendChild(sheet);
       }
       sheet.textContent = '@keyframes ticker{from{transform:translate3d(0,0,0)}to{transform:translate3d(-' + lap + 'px,0,0)}}';
-      track.style.animation = 'none';
-      void track.offsetWidth;
-      track.style.animation = 'ticker ' + (lap / 50) + 's linear infinite';
+      track.dataset.scrolling = String(lap);
+      track.style.animation = 'ticker ' + (lap / SCROLL_SPEED) + 's linear infinite';
     }
 
     function shrink(el, start, min, limit) {
@@ -583,7 +586,49 @@
     }
 
     function setAll(selector, value) {
-      document.querySelectorAll(selector).forEach(function (el) { el.textContent = value; });
+      var text = value == null ? '' : String(value);
+      var nodes = document.querySelectorAll(selector);
+      if (!text || text === '--') {
+        var has = false;
+        nodes.forEach(function (el) {
+          if (el.textContent && el.textContent !== '--') has = true;
+        });
+        if (has) return;
+        if (!text) text = '--';
+      }
+      nodes.forEach(function (el) {
+        if (el.textContent !== text) el.textContent = text;
+      });
+    }
+
+    var CACHE_KEY = 'slide-osaka-' + SITE.amedas;
+    var shownIso = '';
+    var refreshing = false;
+
+    function readCache() {
+      try {
+        var data = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (!data || !data.obs || !data.iso) return null;
+        return data;
+      } catch (e) { return null; }
+    }
+
+    function writeCache(obs, iso, code) {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ obs: obs, iso: iso, code: code || null }));
+      } catch (e) {}
+    }
+
+    function preload(src) {
+      return new Promise(function (resolve) {
+        if (!src) { resolve(); return; }
+        var img = new Image();
+        var done = function () { resolve(); };
+        img.onload = done;
+        img.onerror = done;
+        img.src = src;
+        if (img.complete) resolve();
+      });
     }
 
     function iconForCode(code) {
@@ -637,45 +682,74 @@
       return data[older.length ? older[older.length - 1] : keys[keys.length - 1]];
     }
 
+    function fetchTimed(url) {
+      var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 8000) : null;
+      return fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined }).then(function (res) {
+        if (timer) clearTimeout(timer);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res;
+      }, function (err) {
+        if (timer) clearTimeout(timer);
+        throw err;
+      });
+    }
+
     async function fetchJson(url) {
-      var res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var res = await fetchTimed(url);
       return res.json();
     }
 
-    async function loadAmedas() {
-      var timeRes = await fetch('https://www.jma.go.jp/bosai/amedas/data/latest_time.txt', { cache: 'no-store' });
-      if (!timeRes.ok) throw new Error('latest_time');
+    async function loadLatestIso() {
+      var timeRes = await fetchTimed('https://www.jma.go.jp/bosai/amedas/data/latest_time.txt');
       var iso = (await timeRes.text()).trim();
       if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(iso)) iso = iso.replace(/\.\d+$/, '') + '+09:00';
+      return iso;
+    }
+
+    function fillFromHistory(data, obs, exactKey) {
+      if (!data || !obs || data.temp) return obs;
+      var keys = Object.keys(data).filter(function (k) { return /^\d{14}$/.test(k); }).sort();
+      var older = keys.filter(function (k) { return k <= exactKey; }).reverse();
+      var out = {};
+      Object.keys(obs).forEach(function (k) { out[k] = obs[k]; });
+      ['temp', 'humidity', 'precipitation10m', 'precipitation1h', 'wind', 'windDirection', 'normalPressure', 'pressure', 'maxTemp', 'minTemp', 'gust', 'sun1h'].forEach(function (field) {
+        if (fieldValue(out[field]) != null) return;
+        for (var i = 0; i < older.length; i++) {
+          var cand = data[older[i]];
+          if (cand && fieldValue(cand[field]) != null) {
+            out[field] = cand[field];
+            break;
+          }
+        }
+      });
+      return out;
+    }
+
+    async function loadAmedas(iso) {
       var latest = new Date(iso);
       var p = jstParts(latest);
-      var ymd = String(latest.getFullYear());
       var parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hourCycle: 'h23'
       }).formatToParts(latest);
       var bag = {};
       parts.forEach(function (x) { bag[x.type] = x.value; });
-      ymd = bag.year + bag.month + bag.day;
+      var ymd = bag.year + bag.month + bag.day;
       var hhmm = p.hour + p.minute;
       var exactKey = ymd + hhmm + '00';
       var blockH = String(Math.floor(Number(p.hour) / 3) * 3).padStart(2, '0');
-      var urls = [
-        'https://www.jma.go.jp/bosai/amedas/data/point/' + SITE.amedas + '/' + ymd + '_' + blockH + '.json',
-        'https://www.jma.go.jp/bosai/amedas/data/map/' + ymd + hhmm + '00.json'
-      ];
-      var lastErr = null;
-      for (var i = 0; i < urls.length; i++) {
-        try {
-          var data = await fetchJson(urls[i]);
-          if (i === 1) {
-            if (!data[SITE.amedas]) throw new Error('地点なし');
-            return { obs: data[SITE.amedas], latest: latest };
-          }
-          return { obs: pickObs(data, exactKey), latest: latest };
-        } catch (e) { lastErr = e; }
-      }
-      throw lastErr || new Error('アメダス取得失敗');
+      var pointUrl = 'https://www.jma.go.jp/bosai/amedas/data/point/' + SITE.amedas + '/' + ymd + '_' + blockH + '.json';
+      var mapUrl = 'https://www.jma.go.jp/bosai/amedas/data/map/' + ymd + hhmm + '00.json';
+      try {
+        var data = await fetchJson(pointUrl);
+        var slot = data[exactKey];
+        var fresh = !!(slot && fieldValue(slot.temp) != null);
+        var obs = fillFromHistory(data, pickObs(data, exactKey), exactKey);
+        return { obs: obs, latest: latest, fresh: fresh };
+      } catch (e) {}
+      var map = await fetchJson(mapUrl);
+      if (!map[SITE.amedas]) throw new Error('地点なし');
+      return { obs: map[SITE.amedas], latest: latest, fresh: fieldValue(map[SITE.amedas].temp) != null };
     }
 
     async function loadForecastCode() {
@@ -694,8 +768,12 @@
       return null;
     }
 
-    function show(obs, latest, forecastCode) {
+    function show(obs, latest, forecastCode, iso) {
       lastShow = { obs: obs, latest: latest, code: forecastCode };
+      if (iso) {
+        shownIso = iso;
+        writeCache(obs, iso, forecastCode);
+      }
       var temp = fieldValue(obs.temp);
       var humi = fieldValue(obs.humidity);
       var p10 = fieldValue(obs.precipitation10m);
@@ -719,34 +797,69 @@
       setAll('.tmin-val', minT != null ? String(Math.round(Number(minT))) : '--');
 
       var src = forecastCode != null ? iconForCode(forecastCode) : iconFromObs(obs);
-      document.querySelectorAll('.weather-icon').forEach(function (el) { el.src = src; });
+      document.querySelectorAll('.weather-icon').forEach(function (el) {
+        if (el.getAttribute('src') !== src) el.setAttribute('src', src);
+      });
       setFootParts(when);
       paint(temp);
-      fitText();
+      var track = document.getElementById('track');
+      if (track.dataset.fitted === '1') updateFeetText();
+      else {
+        fitText();
+        track.dataset.fitted = '1';
+      }
+      document.getElementById('stage').classList.add('is-ready');
+    }
+
+    function updateFeetText() {
+      document.querySelectorAll('.foot-txt.is-line').forEach(function (txt) {
+        var pieces = txt.querySelectorAll('.foot-piece');
+        if (pieces.length !== FOOT_PARTS.length) return;
+        for (var i = 0; i < pieces.length; i++) {
+          if (pieces[i].textContent !== FOOT_PARTS[i]) pieces[i].textContent = FOOT_PARTS[i];
+        }
+      });
     }
 
     buildTrack();
-    fitText();
+    var cached = readCache();
+    if (cached) show(cached.obs, new Date(cached.iso), cached.code, cached.iso);
     startScroll();
 
+    function observationReady(obs) {
+      return !!(obs && fieldValue(obs.temp) != null);
+    }
+
     async function refresh() {
+      if (refreshing) return;
+      refreshing = true;
       try {
-        var loaded = await loadAmedas();
-        var code = null;
-        try { code = await loadForecastCode(); } catch (e) { code = null; }
-        show(loaded.obs, loaded.latest, code);
-      } catch (e) {
-        paint(null);
-        ['temp', 'rain', 'wind', 'humi', 'pres', 'gust'].forEach(function (k) { setAll('.' + k + '-val', '--'); });
-        setAll('.dir-val', '--');
-        fitText();
-      }
+        var iso = await loadLatestIso();
+        if (iso === shownIso && lastShow) return;
+        var loaded = await loadAmedas(iso);
+        if (!observationReady(loaded.obs)) return;
+        /* 新しい時刻の気温が届くまで、いま出ている数値は変えない */
+        if (!loaded.fresh && lastShow) return;
+        var code = lastShow ? lastShow.code : null;
+        try {
+          var nextCode = await loadForecastCode();
+          if (nextCode) code = nextCode;
+        } catch (e) {}
+        var src = code != null ? iconForCode(code) : iconFromObs(loaded.obs);
+        await preload(src);
+        if (loaded.fresh && iso === shownIso && lastShow) return;
+        show(loaded.obs, loaded.latest, code, loaded.fresh ? iso : null);
+      } catch (e) {}
+      finally { refreshing = false; }
     }
 
     refresh();
-    setInterval(refresh, 10 * 60 * 1000);
+    /* 時刻だけを先に見る。観測が揃ってから、表示中の数字を一度に差し替える */
+    setInterval(refresh, 10 * 1000);
     if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () { fitText(); });
+      document.fonts.ready.then(function () {
+        if (document.getElementById('track').dataset.fitted === '1') fitText();
+      });
     }
   </script>
 </body>
