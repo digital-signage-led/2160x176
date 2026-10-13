@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>2160×256 防災情報</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,6 +16,8 @@
       height: 100%;
       background: #000;
       overflow: hidden;
+      -webkit-text-size-adjust: none;
+      text-size-adjust: none;
     }
     .stage {
       position: absolute;
@@ -28,7 +30,7 @@
       overflow: hidden;
       background: #000;
       transform-origin: 0 0;
-      contain: strict;
+      transform: scale(min(1, calc(100vw / 2160), calc(100vh / 256)));
     }
     .marquee {
       position: absolute;
@@ -179,17 +181,20 @@
     };
 
     function fitStage() {
-      /* 天気ボードと同じ。CSSは 2160×256。窓が違うときだけ全体が入るように縮小する */
+      /* 中身は 2160×256。サイネージの枠が小さいときは、切らずに全体を縮小する */
       var stage = document.getElementById('stage');
+      var vv = window.visualViewport;
+      var w = vv && vv.width ? vv.width : window.innerWidth;
+      var h = vv && vv.height ? vv.height : window.innerHeight;
       stage.style.width = '2160px';
       stage.style.height = '256px';
       stage.style.transformOrigin = '0 0';
-      var s = Math.min(window.innerWidth / 2160, window.innerHeight / 256);
+      stage.style.left = '0px';
+      stage.style.top = '0px';
+      var s = Math.min(w / 2160, h / 256);
       if (!isFinite(s) || s <= 0) s = 1;
       if (s > 1) s = 1;
-      stage.style.left = Math.max(0, Math.round((window.innerWidth - 2160 * s) / 2)) + 'px';
-      stage.style.top = Math.max(0, Math.round((window.innerHeight - 256 * s) / 2)) + 'px';
-      stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
+      stage.style.transform = (s > 0.999) ? 'none' : ('scale(' + s + ')');
     }
     window.addEventListener('resize', fitStage);
     fitStage();
