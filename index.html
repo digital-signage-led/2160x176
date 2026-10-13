@@ -76,7 +76,8 @@
       color: #000;
       white-space: nowrap;
       text-align: center;
-      max-width: 126px;
+      min-width: 0;
+      max-width: none;
       overflow: hidden;
     }
     .body {
@@ -118,7 +119,8 @@
       font-size: 56px;
       line-height: 1;
       color: #000;
-      max-width: 124px;
+      min-width: 0;
+      max-width: none;
       overflow: hidden;
       white-space: nowrap;
       text-align: center;
@@ -239,7 +241,6 @@
     }
     .stage.is-portrait .label {
       font-size: 72px;
-      max-width: 340px;
     }
     .stage.is-portrait .body {
       height: 456px;
@@ -256,7 +257,6 @@
     .stage.is-portrait .unit { font-size: 72px; }
     .stage.is-portrait .dir {
       font-size: 148px;
-      max-width: 340px;
     }
     .stage.is-portrait .icon {
       width: 260px;
@@ -432,9 +432,11 @@
 
     function shrink(el, start, min, limit) {
       if (!el) return;
+      el.style.maxWidth = 'none';
       var size = start;
       el.style.fontSize = size + 'px';
-      var cap = limit || el.clientWidth || 122;
+      var parent = el.parentElement;
+      var cap = limit || (parent && parent.clientWidth) || el.clientWidth || 122;
       while (size > min && el.scrollWidth > cap + 1) {
         size -= 1;
         el.style.fontSize = size + 'px';
@@ -444,8 +446,8 @@
     function fitText() {
       var portrait = document.getElementById('stage').classList.contains('is-portrait');
       var labelStart = portrait ? 72 : 34;
-      var labelMin = portrait ? 36 : 18;
-      var labelCap = portrait ? 340 : 126;
+      var labelMin = portrait ? 28 : 12;
+      var labelCap = portrait ? 340 : 120;
       var dirStart = portrait ? 148 : 56;
       var dirMin = portrait ? 64 : 32;
       var dirCap = portrait ? 340 : 124;
@@ -741,6 +743,9 @@
 
     refresh();
     setInterval(refresh, 10 * 60 * 1000);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { fitText(); });
+    }
   </script>
 </body>
 </html>
