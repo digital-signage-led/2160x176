@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=2160, initial-scale=1">
+  <meta name="viewport" content="width=2160, height=256, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>2160×256 気象 - 大阪市</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&family=Noto+Sans+JP:wght@700;800&display=swap">
   <style>
@@ -19,8 +19,8 @@
     html, body {
       margin: 0;
       padding: 0;
-      width: 100%;
-      height: 100%;
+      width: 2160px;
+      height: 256px;
       overflow: hidden;
       background: #000;
     }
@@ -352,20 +352,25 @@
         sh = 1920;
         s = Math.min(w / sw, h / sh);
       } else {
-        /* サイネージの帯は幅 2160。枠が小さいときだけ縮小して、右端で切らない */
+        /* サイネージの枠は 2160×256。拡大せず、左上にそのまま置く */
         sw = STAGE;
         sh = 256;
-        /* 4Kへ拡大するとスクロールがカクつくので、2160のまま置く */
-        s = Math.min(1, w / sw, h / sh);
+        s = 1;
       }
       if (!isFinite(s) || s <= 0) s = 1;
       stage.classList.toggle('is-portrait', portrait);
       stage.style.width = sw + 'px';
       stage.style.height = sh + 'px';
-      stage.style.left = Math.max(0, Math.round((w - sw * s) / 2)) + 'px';
-      stage.style.top = Math.max(0, Math.round((h - sh * s) / 2)) + 'px';
       stage.style.transformOrigin = '0 0';
-      stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
+      if (portrait) {
+        stage.style.left = Math.max(0, Math.round((w - sw * s) / 2)) + 'px';
+        stage.style.top = Math.max(0, Math.round((h - sh * s) / 2)) + 'px';
+        stage.style.transform = (Math.abs(s - 1) < 0.001) ? 'none' : ('scale(' + s + ')');
+      } else {
+        stage.style.left = '0px';
+        stage.style.top = '0px';
+        stage.style.transform = 'none';
+      }
       var viewW = portrait ? 1080 : STAGE;
       var changed = (layoutMode !== '' && layoutMode !== mode) || (layoutMode !== '' && viewW !== layoutWidth);
       layoutMode = mode;
