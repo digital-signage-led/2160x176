@@ -206,15 +206,100 @@
       color: #1a1a1a;
       white-space: nowrap;
     }
+    .board-foot {
+      display: none;
+    }
     .stage.is-light .label,
     .stage.is-light .num,
     .stage.is-light .dir,
     .stage.is-light .unit { color: #ebebeb; }
+
+    /* 1080×1920。9面を3列にし、下帯の文言は横長と同じ */
+    .stage.is-portrait {
+      width: 1080px;
+      height: 1920px;
+    }
+    .stage.is-portrait .track {
+      display: grid;
+      grid-template-columns: repeat(3, 360px);
+      grid-template-rows: repeat(3, 584px);
+      width: 1080px;
+      height: 1752px;
+      transform: none !important;
+    }
+    .stage.is-portrait .col {
+      width: 360px;
+      height: 584px;
+      flex: none;
+      overflow: hidden;
+    }
+    .stage.is-portrait .top {
+      height: 128px;
+      flex-basis: 128px;
+    }
+    .stage.is-portrait .label {
+      font-size: 72px;
+      max-width: 340px;
+    }
+    .stage.is-portrait .body {
+      height: 456px;
+      flex-basis: 456px;
+    }
+    .stage.is-portrait .foot {
+      display: none;
+    }
+    .stage.is-portrait .val {
+      max-width: 340px;
+      gap: 8px;
+    }
+    .stage.is-portrait .num { font-size: 200px; }
+    .stage.is-portrait .unit { font-size: 72px; }
+    .stage.is-portrait .dir {
+      font-size: 148px;
+      max-width: 340px;
+    }
+    .stage.is-portrait .icon {
+      width: 260px;
+      height: 176px;
+      border-radius: 18px;
+    }
+    .stage.is-portrait .range {
+      max-width: 340px;
+      gap: 6px;
+      padding: 10px 16px 12px;
+      border-radius: 16px;
+    }
+    .stage.is-portrait .hi,
+    .stage.is-portrait .lo,
+    .stage.is-portrait .sep { font-size: 132px; }
+    .stage.is-portrait .range .unit { font-size: 56px; }
+    .stage.is-portrait .board-foot {
+      display: flex;
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      z-index: 3;
+      width: 1080px;
+      height: 168px;
+      align-items: center;
+      justify-content: center;
+      background: var(--foot-bg);
+      overflow: hidden;
+    }
+    .stage.is-portrait .board-foot .foot-txt {
+      max-width: none;
+      line-height: 1.2;
+    }
+    .stage.is-portrait .board-foot .foot-piece {
+      font-size: 44px;
+      line-height: 1.2;
+    }
   </style>
 </head>
 <body>
   <main class="stage" id="stage" aria-label="気象 大阪市">
     <div class="track" id="track"></div>
+    <div class="board-foot" id="board-foot"></div>
   </main>
   <script src="./assets/jma-weather-icons.js"></script>
   <script>
@@ -235,14 +320,35 @@
     };
     var DIRS = ['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
 
+    var layoutMode = '';
+    var lastShow = null;
+
+    function isPortraitView() {
+      return window.innerHeight > window.innerWidth;
+    }
+
     function fitStage() {
       var stage = document.getElementById('stage');
-      var s = Math.min(window.innerWidth / STAGE, window.innerHeight / 176, 1);
+      var portrait = isPortraitView();
+      var mode = portrait ? 'portrait' : 'landscape';
+      var sw = portrait ? 1080 : STAGE;
+      var sh = portrait ? 1920 : 176;
+      var s = Math.min(window.innerWidth / sw, window.innerHeight / sh, 1);
       if (!isFinite(s) || s <= 0) s = 1;
+      stage.classList.toggle('is-portrait', portrait);
+      stage.style.width = sw + 'px';
+      stage.style.height = sh + 'px';
       stage.style.left = '0px';
       stage.style.top = '0px';
       stage.style.transformOrigin = '0 0';
       stage.style.transform = (s === 1) ? 'none' : ('scale(' + s + ')');
+      var changed = layoutMode !== '' && layoutMode !== mode;
+      layoutMode = mode;
+      if (changed) {
+        buildTrack();
+        if (lastShow) show(lastShow.obs, lastShow.latest, lastShow.code);
+        else fitText();
+      }
     }
     window.addEventListener('resize', fitStage);
     fitStage();
@@ -293,7 +399,8 @@
 
     function buildTrack() {
       var lap = setWidth();
-      var copies = Math.ceil((STAGE + lap) / lap) + 1;
+      var portrait = document.getElementById('stage').classList.contains('is-portrait');
+      var copies = portrait ? 1 : (Math.ceil((STAGE + lap) / lap) + 1);
       var html = '';
       for (var c = 0; c < copies; c++) {
         for (var i = 0; i < ORDER.length; i++) html += panelHtml(ORDER[i]);
@@ -304,13 +411,19 @@
     }
 
     function startScroll() {
-      var track = document.getElementById('track');
-      var lap = Number(track.dataset.lap) || setWidth();
       var x = 0;
       function frame() {
-        x -= SCROLL_PX;
-        if (x <= -lap) x += lap;
-        track.style.transform = 'translate3d(' + Math.round(x) + 'px,0,0)';
+        var track = document.getElementById('track');
+        var stage = document.getElementById('stage');
+        if (stage.classList.contains('is-portrait')) {
+          x = 0;
+          track.style.transform = 'none';
+        } else {
+          var lap = Number(track.dataset.lap) || setWidth();
+          x -= SCROLL_PX;
+          if (x <= -lap) x += lap;
+          track.style.transform = 'translate3d(' + Math.round(x) + 'px,0,0)';
+        }
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
@@ -328,20 +441,33 @@
     }
 
     function fitText() {
-      document.querySelectorAll('.label').forEach(function (el) { shrink(el, 34, 18, 126); });
-      document.querySelectorAll('.dir-val').forEach(function (el) { shrink(el, 56, 32, 124); });
+      var portrait = document.getElementById('stage').classList.contains('is-portrait');
+      var labelStart = portrait ? 72 : 34;
+      var labelMin = portrait ? 36 : 18;
+      var labelCap = portrait ? 340 : 126;
+      var dirStart = portrait ? 148 : 56;
+      var dirMin = portrait ? 64 : 32;
+      var dirCap = portrait ? 340 : 124;
+      var numStart = portrait ? 200 : 64;
+      var numMin = portrait ? 72 : 36;
+      var numCap = portrait ? 340 : 124;
+      var rangeStart = portrait ? 132 : 52;
+      var rangeMin = portrait ? 56 : 32;
+      var rangeCap = portrait ? 340 : 124;
+      document.querySelectorAll('.label').forEach(function (el) { shrink(el, labelStart, labelMin, labelCap); });
+      document.querySelectorAll('.dir-val').forEach(function (el) { shrink(el, dirStart, dirMin, dirCap); });
       groupFeet();
       document.querySelectorAll('.val').forEach(function (wrap) {
         var num = wrap.querySelector('.num');
         var unit = wrap.querySelector('.unit');
         if (!num) return;
-        var size = 64;
+        var size = numStart;
         function apply(n) {
           num.style.fontSize = n + 'px';
-          if (unit) unit.style.fontSize = Math.max(20, Math.round(n * 0.44)) + 'px';
+          if (unit) unit.style.fontSize = Math.max(portrait ? 36 : 20, Math.round(n * 0.44)) + 'px';
         }
         apply(size);
-        while (size > 36 && wrap.scrollWidth > 124) {
+        while (size > numMin && wrap.scrollWidth > numCap) {
           size -= 1;
           apply(size);
         }
@@ -350,14 +476,14 @@
         var hi = card.querySelector('.tmax-val');
         var lo = card.querySelector('.tmin-val');
         var sep = card.querySelector('.sep');
-        var size = 52;
+        var size = rangeStart;
         [hi, lo, sep].forEach(function (el) { if (el) el.style.fontSize = size + 'px'; });
-        while (size > 32 && card.scrollWidth > 124) {
+        while (size > rangeMin && card.scrollWidth > rangeCap) {
           size -= 1;
           [hi, lo, sep].forEach(function (el) { if (el) el.style.fontSize = size + 'px'; });
         }
         var unit = card.querySelector('.unit');
-        if (unit) unit.style.fontSize = Math.max(18, Math.round(size * 0.46)) + 'px';
+        if (unit) unit.style.fontSize = Math.max(portrait ? 32 : 18, Math.round(size * 0.46)) + 'px';
       });
     }
 
@@ -371,7 +497,34 @@
       FOOT_PARTS = [SITE.label, when.stamp, '降水量は10分間', '最高/最低は日中'];
     }
 
+    function fillBoardFoot() {
+      var bar = document.getElementById('board-foot');
+      bar.innerHTML = '';
+      var txt = document.createElement('div');
+      txt.className = 'foot-txt is-line';
+      FOOT_PARTS.forEach(function (part) {
+        var piece = document.createElement('span');
+        piece.className = 'foot-piece';
+        piece.textContent = part;
+        txt.appendChild(piece);
+      });
+      bar.appendChild(txt);
+      var size = 48;
+      var pieces = txt.querySelectorAll('.foot-piece');
+      pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
+      while (size > 28 && txt.scrollWidth > 1040) {
+        size -= 1;
+        pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
+      }
+    }
+
     function groupFeet() {
+      if (document.getElementById('stage').classList.contains('is-portrait')) {
+        fillBoardFoot();
+        return;
+      }
+      var bar = document.getElementById('board-foot');
+      if (bar) bar.innerHTML = '';
       var cols = Array.prototype.slice.call(document.querySelectorAll('#track > .col'));
       cols.forEach(function (col) {
         var foot = col.querySelector('.foot');
@@ -384,12 +537,10 @@
         txt.style.maxWidth = '';
         txt.textContent = '';
       });
-      var i = 0;
-      while (i < cols.length) {
-        if (!cols[i].querySelector('.foot')) { i += 1; continue; }
-        var j = i + 1;
-        while (j < cols.length && cols[j].querySelector('.foot')) j += 1;
-        var count = j - i;
+      var lapCount = ORDER.length;
+      for (var i = 0; i < cols.length; i += lapCount) {
+        var count = Math.min(lapCount, cols.length - i);
+        var j = i + count;
         var foot = cols[i].querySelector('.foot');
         var txt = foot.querySelector('.foot-txt');
         var width = count * FACE;
@@ -414,7 +565,6 @@
           var covered = cols[k].querySelector('.foot');
           if (covered) covered.classList.add('is-covered');
         }
-        i = j;
       }
     }
 
@@ -540,6 +690,7 @@
     }
 
     function show(obs, latest, forecastCode) {
+      lastShow = { obs: obs, latest: latest, code: forecastCode };
       var temp = fieldValue(obs.temp);
       var humi = fieldValue(obs.humidity);
       var p10 = fieldValue(obs.precipitation10m);
