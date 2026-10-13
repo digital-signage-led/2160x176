@@ -214,6 +214,23 @@
       color: #1a1a1a;
       white-space: nowrap;
     }
+    .col.news {
+      width: auto;
+      flex: 0 0 auto;
+      min-width: 960px;
+    }
+    .col.news .top { background: #143d6b; }
+    .col.news .label { color: #fff; }
+    .col.news .body { background: #f4f7fb; }
+    .news-text {
+      font-family: "Noto Sans JP", sans-serif;
+      font-weight: 800;
+      font-size: 64px;
+      line-height: 1;
+      color: #102033;
+      white-space: nowrap;
+      padding: 0 36px;
+    }
     .board-foot {
       display: none;
       position: absolute;
@@ -303,12 +320,87 @@
       font-size: 44px;
       line-height: 1.2;
     }
+
+    /* 注意報・警報・台風・大雨のテロップ */
+    .telop {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 8;
+      height: var(--foot-h);
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+      color: #fff;
+      background: #b00020;
+    }
+    .telop[hidden] { display: none !important; }
+    .telop-tag {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      background: #4a000c;
+      font-family: "Noto Sans JP", sans-serif;
+      font-weight: 800;
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .telop-view {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      padding-left: 20px;
+    }
+    .telop-track {
+      display: flex;
+      width: max-content;
+      height: 100%;
+      align-items: center;
+      will-change: transform;
+    }
+    .telop-copy {
+      flex: 0 0 auto;
+      font-family: "Noto Sans JP", sans-serif;
+      font-weight: 800;
+      font-size: 36px;
+      line-height: var(--foot-h);
+      white-space: nowrap;
+      padding-right: 0;
+    }
+    .telop.is-special { background: #5b21b6; }
+    .telop.is-special .telop-tag {
+      background: #2e1065;
+      animation: telop-blink 0.9s steps(2, end) infinite;
+    }
+    .telop.is-warning { background: #c41230; }
+    .telop.is-warning .telop-tag { background: #6d0014; }
+    .telop.is-rain { background: #0c4a8a; }
+    .telop.is-rain .telop-tag { background: #06294d; }
+    .telop.is-typhoon { background: #c2410c; }
+    .telop.is-typhoon .telop-tag { background: #7c2d12; }
+    .telop.is-advisory { background: #f5c400; color: #141414; }
+    .telop.is-advisory .telop-tag { background: #141414; color: #fff; }
+    @keyframes telop-blink {
+      50% { background: #fff; color: #4c1d95; }
+    }
+    .stage.is-portrait .telop { height: 168px; }
+    .stage.is-portrait .telop-tag { font-size: 48px; padding: 0 28px; }
+    .stage.is-portrait .telop-copy { font-size: 64px; line-height: 168px; }
   </style>
 </head>
 <body>
   <main class="stage" id="stage" aria-label="気象 大阪市">
     <div class="track" id="track"></div>
     <div class="board-foot" id="board-foot"></div>
+    <div class="telop" id="telop" hidden aria-live="assertive">
+      <div class="telop-tag" id="telop-tag"></div>
+      <div class="telop-view"><div class="telop-track" id="telop-track"></div></div>
+    </div>
   </main>
   <script src="./assets/jma-weather-icons.js"></script>
   <script>
@@ -328,6 +420,7 @@
       humi: '湿度', pres: '気圧', tmaxmin: '最高/最低', gust: '最大瞬間風速'
     };
     var DIRS = ['北','北北東','北東','東北東','東','東南東','南東','南南東','南','南南西','南西','西南西','西','西北西','北西','北北西'];
+    var newsLine = '';
 
     var layoutMode = '';
     var layoutWidth = 0;
@@ -379,6 +472,7 @@
         if (lastShow) show(lastShow.obs, lastShow.latest, lastShow.code);
         else fitText();
       }
+      applyTelop();
     }
     window.addEventListener('resize', fitStage);
     fitStage();
@@ -421,6 +515,14 @@
         '</section>';
     }
 
+    function newsHtml() {
+      return '<section class="col news" data-type="news">' +
+        '<div class="top"><span class="label">ニュース</span></div>' +
+        '<div class="body"><span class="news-text"></span></div>' +
+        '<div class="foot"><span class="foot-txt"></span></div>' +
+        '</section>';
+    }
+
     function setWidth() {
       var w = 0;
       for (var i = 0; i < ORDER.length; i++) w += FACE;
@@ -436,6 +538,7 @@
       var html = '';
       for (var c = 0; c < copies; c++) {
         for (var i = 0; i < ORDER.length; i++) html += panelHtml(ORDER[i]);
+        if (!portrait) html += newsHtml();
       }
       var track = document.getElementById('track');
       track.innerHTML = html;
@@ -522,6 +625,45 @@
         var unit = card.querySelector('.unit');
         if (unit) unit.style.fontSize = Math.max(portrait ? 32 : 32, Math.round(size * 0.46)) + 'px';
       });
+      placeNews();
+    }
+
+    function placeNews() {
+      var stage = document.getElementById('stage');
+      if (!stage || stage.classList.contains('is-portrait')) return;
+      var text = newsLine || '大阪市の気象情報をお伝えします';
+      var cols = document.querySelectorAll('.col.news');
+      if (!cols.length) return;
+      cols.forEach(function (col) {
+        var el = col.querySelector('.news-text');
+        if (!el) return;
+        el.textContent = text;
+        var w = Math.max(960, el.scrollWidth + 72);
+        col.style.width = w + 'px';
+        col.style.flexBasis = w + 'px';
+      });
+      var track = document.getElementById('track');
+      var kids = track.children;
+      var step = ORDER.length + 1;
+      var lap = 0;
+      var n = Math.min(step, kids.length);
+      for (var i = 0; i < n; i++) lap += kids[i].offsetWidth;
+      if (lap > 0) track.dataset.lap = String(Math.round(lap));
+      groupFeet();
+      startScroll();
+    }
+
+    async function loadNewsLine() {
+      var data = await fetchJson('https://www.jma.go.jp/bosai/forecast/data/overview_forecast/' + SITE.forecastArea + '.json');
+      var raw = '';
+      if (data && data.headlineText && String(data.headlineText).trim()) raw = String(data.headlineText);
+      else if (data && data.text) raw = String(data.text);
+      raw = raw.replace(/\r?\n+/g, '　').replace(/[ \t]+/g, ' ').trim();
+      var bits = raw.split('。').map(function (s) { return s.trim(); }).filter(Boolean);
+      var line = bits.slice(0, 2).join('。');
+      if (line) line += '。';
+      if (line.length > 120) line = line.slice(0, 120) + '…';
+      return line;
     }
 
     var FOOT_PARTS = [SITE.label];
@@ -573,13 +715,19 @@
         txt.style.maxWidth = '';
         txt.textContent = '';
       });
-      var lapCount = ORDER.length;
-      for (var i = 0; i < cols.length; i += lapCount) {
-        var count = Math.min(lapCount, cols.length - i);
+      var hasNews = cols.some(function (col) { return col.classList.contains('news'); });
+      var step = ORDER.length + (hasNews ? 1 : 0);
+      for (var i = 0; i < cols.length; i += step) {
+        var count = Math.min(step, cols.length - i);
         var j = i + count;
         var foot = cols[i].querySelector('.foot');
         var txt = foot.querySelector('.foot-txt');
-        var width = count * FACE;
+        var width = 0;
+        var newsCol = null;
+        for (var n = i; n < j; n++) {
+          if (cols[n].classList.contains('news')) newsCol = cols[n];
+          else width += cols[n].offsetWidth;
+        }
         foot.classList.add('is-span');
         foot.style.width = width + 'px';
         txt.classList.add('is-line');
@@ -598,8 +746,31 @@
           pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
         }
         for (var k = i + 1; k < j; k++) {
+          if (cols[k].classList.contains('news')) continue;
           var covered = cols[k].querySelector('.foot');
           if (covered) covered.classList.add('is-covered');
+        }
+        if (newsCol) {
+          var nfoot = newsCol.querySelector('.foot');
+          var ntxt = nfoot.querySelector('.foot-txt');
+          nfoot.classList.remove('is-covered');
+          ntxt.classList.add('is-line');
+          ntxt.style.maxWidth = 'none';
+          ntxt.textContent = '';
+          FOOT_PARTS.forEach(function (part) {
+            var piece = document.createElement('span');
+            piece.className = 'foot-piece';
+            piece.textContent = part;
+            ntxt.appendChild(piece);
+          });
+          var nsize = 48;
+          var npieces = ntxt.querySelectorAll('.foot-piece');
+          npieces.forEach(function (el) { el.style.fontSize = nsize + 'px'; });
+          var ncap = newsCol.offsetWidth - 16;
+          while (nsize > 28 && ntxt.scrollWidth > ncap) {
+            nsize -= 1;
+            npieces.forEach(function (el) { el.style.fontSize = nsize + 'px'; });
+          }
         }
       }
     }
@@ -609,8 +780,8 @@
       var stage = document.getElementById('stage');
       stage.classList.toggle('is-light', c.light);
       stage.style.background = c.bg;
-      document.querySelectorAll('.col .top').forEach(function (el) { el.style.background = c.bar; });
-      document.querySelectorAll('.col .body').forEach(function (el) { el.style.background = c.bg; });
+      document.querySelectorAll('.col:not(.news) .top').forEach(function (el) { el.style.background = c.bar; });
+      document.querySelectorAll('.col:not(.news) .body').forEach(function (el) { el.style.background = c.bg; });
     }
 
     function setAll(selector, value) {
@@ -756,6 +927,190 @@
       fitText();
     }
 
+    var WARN_NAME = {
+      '02': '暴風雪警報', '03': '大雨警報', '04': '洪水警報', '05': '暴風警報',
+      '06': '大雪警報', '07': '波浪警報', '08': '高潮警報',
+      '10': '大雨注意報', '12': '大雪注意報', '13': '風雪注意報', '14': '雷注意報',
+      '15': '強風注意報', '16': '波浪注意報', '17': '融雪注意報', '18': '高潮注意報',
+      '19': '濃霧注意報', '20': '乾燥注意報', '21': 'なだれ注意報', '22': '低温注意報',
+      '23': '霜注意報', '24': '着氷注意報', '25': '着雪注意報',
+      '32': '暴風雪特別警報', '33': '大雨特別警報', '35': '暴風特別警報',
+      '36': '大雪特別警報', '37': '波浪特別警報', '38': '高潮特別警報'
+    };
+    var LEVEL_RANK = { special: 5, warning: 4, rain: 3, typhoon: 2, advisory: 1 };
+    var LEVEL_TAG = { special: '特別警報', warning: '警報', rain: '大雨', typhoon: '台風', advisory: '注意報' };
+    var telopPayload = null;
+
+    function warnMeta(code) {
+      var key = String(code);
+      if (key.length === 1) key = '0' + key;
+      var name = WARN_NAME[key];
+      if (!name) return null;
+      var level = 'advisory';
+      if (name.indexOf('特別警報') >= 0) level = 'special';
+      else if (name.indexOf('警報') >= 0) level = 'warning';
+      return { name: name, level: level };
+    }
+
+    function warningsForCity(data) {
+      var found = [];
+      var seen = {};
+      var types = (data && data.areaTypes) || [];
+      for (var i = 0; i < types.length; i++) {
+        var areas = types[i].areas || [];
+        for (var j = 0; j < areas.length; j++) {
+          if (String(areas[j].code) !== '2710000') continue;
+          var list = areas[j].warnings || [];
+          for (var k = 0; k < list.length; k++) {
+            var status = list[k].status || '';
+            if (!status || status === '解除' || status.indexOf('なし') >= 0) continue;
+            var meta = warnMeta(list[k].code);
+            if (!meta || seen[meta.name]) continue;
+            seen[meta.name] = true;
+            found.push({ name: meta.name, level: meta.level, status: status });
+          }
+        }
+      }
+      found.sort(function (a, b) { return LEVEL_RANK[b.level] - LEVEL_RANK[a.level]; });
+      return found;
+    }
+
+    function warnSentence(item) {
+      var verb = '発表されています';
+      if (item.status === '継続') verb = '継続しています';
+      else if (item.status.indexOf('から') >= 0) verb = 'に切り替わっています';
+      return '大阪市に' + item.name + 'が' + verb;
+    }
+
+    function rainAmount(value) {
+      var n = Number(value);
+      if (!isFinite(n)) return '';
+      if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
+      return n.toFixed(1);
+    }
+
+    function rainSentence(obs) {
+      if (!obs) return '';
+      var p1 = fieldValue(obs.precipitation1h);
+      var p3 = fieldValue(obs.precipitation3h);
+      var p10 = fieldValue(obs.precipitation10m);
+      if (p1 != null && Number(p1) >= 20) return '大阪市で大雨です　1時間の降水量は' + rainAmount(p1) + 'ミリ';
+      if (p3 != null && Number(p3) >= 50) return '大阪市で大雨です　3時間の降水量は' + rainAmount(p3) + 'ミリ';
+      if (p10 != null && Number(p10) >= 5) return '大阪市で大雨です　10分間の降水量は' + rainAmount(p10) + 'ミリ';
+      return '';
+    }
+
+    function typhoonSentence(spec, brief) {
+      if (!Array.isArray(spec)) return '';
+      var title = null;
+      var now = null;
+      for (var i = 0; i < spec.length; i++) {
+        if (spec[i].part === 'title') title = spec[i];
+        else if (spec[i].part && spec[i].part.jp === '実況') now = spec[i];
+      }
+      var numRaw = String((title && title.typhoonNumber) || (brief && brief.typhoonNumber) || '');
+      var num = numRaw.length >= 4 ? String(Number(numRaw.slice(2))) : '';
+      var name = title && title.name && title.name.jp;
+      var cat = (now && now.category && now.category.jp) || (title && title.category && title.category.jp) || '台風';
+      var head = cat;
+      if (num && cat.indexOf('台風') >= 0) head = '台風' + num + '号';
+      else if (num) head = cat;
+      if (name) head += '　' + name;
+      var bits = [head];
+      if (now && now.location) {
+        var move = now.location;
+        if (now.course) move += 'を' + now.course + 'へ';
+        if (now.speed && now.speed['km/h']) move += '時速' + now.speed['km/h'] + 'キロで進んでいます';
+        else move += 'にあります';
+        bits.push(move);
+      }
+      if (now && now.pressure) bits.push('中心気圧' + now.pressure + 'ヘクトパスカル');
+      var wind = now && now.maximumWind && now.maximumWind.sustained && now.maximumWind.sustained['m/s'];
+      if (wind) bits.push('最大風速' + wind + 'メートル');
+      return bits.join('　');
+    }
+
+    async function loadTyphoonLines() {
+      var list = await fetchJson('https://www.jma.go.jp/bosai/typhoon/data/targetTc.json');
+      if (!Array.isArray(list)) return [];
+      var lines = [];
+      for (var i = 0; i < list.length; i++) {
+        var id = list[i] && list[i].tropicalCyclone;
+        if (!id) continue;
+        try {
+          var spec = await fetchJson('https://www.jma.go.jp/bosai/typhoon/data/' + id + '/specifications.json');
+          var line = typhoonSentence(spec, list[i]);
+          if (line) lines.push(line);
+        } catch (e) {}
+      }
+      return lines;
+    }
+
+    function applyTelop() {
+      var bar = document.getElementById('telop');
+      var tag = document.getElementById('telop-tag');
+      var track = document.getElementById('telop-track');
+      if (!bar || !track) return;
+      if (!telopPayload) {
+        bar.hidden = true;
+        track.style.animation = 'none';
+        track.innerHTML = '';
+        return;
+      }
+      bar.hidden = false;
+      bar.className = 'telop is-' + telopPayload.level;
+      tag.textContent = telopPayload.tag;
+      track.innerHTML = '';
+      track.style.animation = 'none';
+      var text = telopPayload.text;
+      var unit = document.createElement('span');
+      unit.className = 'telop-copy';
+      unit.textContent = text;
+      track.appendChild(unit);
+      var unitW = Math.ceil(unit.getBoundingClientRect().width);
+      var viewW = track.parentElement.clientWidth || 1600;
+      if (unitW < 1) unitW = text.length * 36;
+      var count = Math.max(2, Math.ceil((viewW + unitW) / unitW));
+      for (var i = 1; i < count; i++) track.appendChild(unit.cloneNode(true));
+      var sheet = document.getElementById('telop-style');
+      if (!sheet) {
+        sheet = document.createElement('style');
+        sheet.id = 'telop-style';
+        document.head.appendChild(sheet);
+      }
+      sheet.textContent = '@keyframes telop-move{from{transform:translate3d(0,0,0)}to{transform:translate3d(-' + unitW + 'px,0,0)}}';
+      var portrait = document.getElementById('stage').classList.contains('is-portrait');
+      var speed = portrait ? 110 : 80;
+      void track.offsetWidth;
+      track.style.animation = 'telop-move ' + Math.max(8, unitW / speed) + 's linear infinite';
+    }
+
+    async function refreshTelop(obs) {
+      var pieces = [];
+      var level = '';
+      function push(lv, text) {
+        if (!text) return;
+        pieces.push(text);
+        if (!level || LEVEL_RANK[lv] > LEVEL_RANK[level]) level = lv;
+      }
+      try {
+        var data = await fetchJson('https://www.jma.go.jp/bosai/warning/data/warning/' + SITE.forecastArea + '.json');
+        var warnings = warningsForCity(data);
+        for (var i = 0; i < warnings.length; i++) push(warnings[i].level, warnSentence(warnings[i]));
+      } catch (e) {}
+      try {
+        var typhoons = await loadTyphoonLines();
+        for (var t = 0; t < typhoons.length; t++) push('typhoon', typhoons[t]);
+      } catch (e) {}
+      push('rain', rainSentence(obs));
+      telopPayload = pieces.length ? {
+        level: level,
+        tag: LEVEL_TAG[level],
+        text: pieces.join('　　') + '　　'
+      } : null;
+      applyTelop();
+    }
+
     buildTrack();
     fitText();
     startScroll();
@@ -765,19 +1120,22 @@
         var loaded = await loadAmedas();
         var code = null;
         try { code = await loadForecastCode(); } catch (e) { code = null; }
+        try { newsLine = await loadNewsLine(); } catch (e) { newsLine = newsLine || ''; }
         show(loaded.obs, loaded.latest, code);
+        refreshTelop(loaded.obs);
       } catch (e) {
         paint(null);
         ['temp', 'rain', 'wind', 'humi', 'pres', 'gust'].forEach(function (k) { setAll('.' + k + '-val', '--'); });
         setAll('.dir-val', '--');
         fitText();
+        refreshTelop(null);
       }
     }
 
     refresh();
     setInterval(refresh, 10 * 60 * 1000);
     if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () { fitText(); });
+      document.fonts.ready.then(function () { fitText(); applyTelop(); });
     }
   </script>
 </body>
