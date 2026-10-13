@@ -25,9 +25,17 @@
       background: #000;
       transform-origin: 0 0;
     }
+    .marquee {
+      position: absolute;
+      left: 700px;
+      top: 0;
+      width: 1460px;
+      height: 242px;
+      overflow: hidden;
+    }
     .track {
       display: flex;
-      height: 256px;
+      height: 242px;
       width: max-content;
       backface-visibility: hidden;
     }
@@ -35,24 +43,17 @@
       display: flex;
       flex-direction: row;
       align-items: stretch;
-      height: 256px;
+      height: 242px;
       width: max-content;
       flex: 0 0 auto;
     }
-    .card {
-      flex: 0 0 2160px;
-      width: 2160px;
-      height: 256px;
-      display: flex;
-      align-items: stretch;
-      background: #050505;
-      border-bottom: 14px solid #1d4ed8;
-      color: #fff;
-      font-family: "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
-      font-weight: 700;
-    }
     .badge {
-      flex: 0 0 700px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 2;
+      width: 700px;
+      height: 242px;
       display: flex;
       align-items: center;
       justify-content: flex-start;
@@ -60,8 +61,11 @@
       background: #e10600;
       clip-path: polygon(0 0, 90% 0, 100% 50%, 90% 100%, 0 100%);
       padding: 0 120px 0 36px;
+      color: #fff;
+      font-family: "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+      font-weight: 900;
     }
-    .card.is-none .badge { background: #1e3a8a; }
+    .badge.is-none { background: #1e3a8a; }
     .badge svg { width: 120px; height: 120px; flex: 0 0 auto; }
     .badge span {
       font-size: 80px;
@@ -70,28 +74,38 @@
       line-height: 1;
       white-space: nowrap;
     }
-    .body {
-      flex: 1 1 auto;
-      min-width: 0;
+    .bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 3;
+      height: 14px;
+      background: #1d4ed8;
+    }
+    .item {
+      flex: 0 0 auto;
       display: flex;
       align-items: center;
-      padding: 0 36px 0 28px;
+      height: 242px;
+      padding: 0 72px;
       gap: 28px;
+      color: #fff;
+      font-family: "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+      font-weight: 700;
     }
     .msg {
       display: flex;
       align-items: center;
       gap: 14px;
-      min-width: 0;
+      margin: 0;
       font-size: 80px;
       font-weight: 900;
       white-space: nowrap;
       line-height: 1;
     }
-    .msg .name {
-      color: #ffe14a;
-    }
-    .card.is-none .msg { font-size: 84px; }
+    .msg .name { color: #ffe14a; }
+    .msg.is-none { font-size: 84px; }
     .rule {
       flex: 0 0 6px;
       width: 6px;
@@ -102,19 +116,18 @@
       display: flex;
       align-items: center;
       gap: 16px;
+      margin: 0;
       font-size: 64px;
       font-weight: 700;
       white-space: nowrap;
       line-height: 1;
     }
     .note svg { width: 100px; height: 100px; flex: 0 0 auto; }
-    .card.is-none .rule,
-    .card.is-none .note { display: none; }
     .wx {
       flex: 0 0 auto;
       display: flex;
       align-items: center;
-      height: 256px;
+      height: 242px;
       margin: 0;
       padding: 0 72px;
       white-space: nowrap;
@@ -128,7 +141,14 @@
 </head>
 <body>
   <main class="stage" id="stage" aria-label="防災情報">
-    <div class="track" id="track"></div>
+    <div class="marquee" id="marquee">
+      <div class="track" id="track"></div>
+    </div>
+    <div class="badge is-none" id="badge">
+      <span id="badge-icon"></span>
+      <span>防災情報</span>
+    </div>
+    <div class="bar"></div>
   </main>
   <script>
     var AREA = '270000';
@@ -183,20 +203,35 @@
       return 'が発表されています';
     }
 
-    function cardHtml(item) {
+    function messageRow(item) {
+      var row = document.createElement('div');
+      row.className = 'item';
+      var msg = document.createElement('p');
       if (!item) {
-        return '<section class="card is-none">' +
-          '<div class="badge">' + infoIcon() + '<span>防災情報</span></div>' +
-          '<div class="body"><p class="msg">警報・注意報は発表されていません</p></div>' +
-          '</section>';
+        msg.className = 'msg is-none';
+        msg.textContent = '警報・注意報は発表されていません';
+        row.appendChild(msg);
+        return row;
       }
-      return '<section class="card">' +
-        '<div class="badge">' + warnIcon() + '<span>防災情報</span></div>' +
-        '<div class="body">' +
-          '<p class="msg">' + CITY_NAME + 'に<span class="name">' + item.name + '</span>' + item.verb + '</p>' +
-          '<div class="rule"></div>' +
-          '<p class="note">' + infoIcon() + '<span>' + item.advice + '</span></p>' +
-        '</div></section>';
+      msg.className = 'msg';
+      msg.appendChild(document.createTextNode(CITY_NAME + 'に'));
+      var name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = item.name;
+      msg.appendChild(name);
+      msg.appendChild(document.createTextNode(item.verb));
+      row.appendChild(msg);
+      var rule = document.createElement('div');
+      rule.className = 'rule';
+      row.appendChild(rule);
+      var note = document.createElement('p');
+      note.className = 'note';
+      note.insertAdjacentHTML('beforeend', infoIcon());
+      var advice = document.createElement('span');
+      advice.textContent = item.advice;
+      note.appendChild(advice);
+      row.appendChild(note);
+      return row;
     }
 
     async function fetchJson(url) {
@@ -245,12 +280,16 @@
     }
 
     function play(items, lines) {
+      var badge = document.getElementById('badge');
+      badge.classList.toggle('is-none', items.length === 0);
+      document.getElementById('badge-icon').innerHTML = items.length ? warnIcon() : infoIcon();
+
       var track = document.getElementById('track');
       track.innerHTML = '';
       var seq = document.createElement('div');
       seq.className = 'seq';
-      if (!items.length) seq.insertAdjacentHTML('beforeend', cardHtml(null));
-      else items.forEach(function (item) { seq.insertAdjacentHTML('beforeend', cardHtml(item)); });
+      if (!items.length) seq.appendChild(messageRow(null));
+      else items.forEach(function (item) { seq.appendChild(messageRow(item)); });
       lines.forEach(function (line) {
         var row = document.createElement('p');
         row.className = 'wx';
@@ -258,14 +297,19 @@
         seq.appendChild(row);
       });
       track.appendChild(seq);
-      var clone = seq.cloneNode(true);
-      clone.setAttribute('aria-hidden', 'true');
-      track.appendChild(clone);
       track.style.animation = 'none';
       track.style.transform = 'none';
       void track.offsetWidth;
-      var lap = Math.round(seq.getBoundingClientRect().width);
+      var view = document.getElementById('marquee').clientWidth;
+      var lap = seq.offsetWidth;
+      if (view > lap) {
+        seq.style.paddingRight = (view - lap) + 'px';
+        lap = view;
+      }
       if (!(lap > 0)) return;
+      var clone = seq.cloneNode(true);
+      clone.setAttribute('aria-hidden', 'true');
+      track.appendChild(clone);
       var sheet = document.getElementById('ticker-style');
       if (!sheet) {
         sheet = document.createElement('style');
@@ -282,16 +326,17 @@
       try { items = await loadItems(); } catch (e) { items = []; }
       try { lines = await loadWeatherLines(); } catch (e) { lines = []; }
       var next = items.map(function (item) { return item.name + item.verb; }).join('\n') + '\n' + lines.join('\n');
-      if (next === signature && trackHasCards()) return;
+      if (next === signature && trackHasRows()) return;
       signature = next;
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
       play(items, lines);
     }
 
-    function trackHasCards() {
-      return document.querySelector('#track .card');
+    function trackHasRows() {
+      return document.querySelector('#track .item, #track .wx');
     }
 
+    document.getElementById('badge-icon').innerHTML = infoIcon();
     refresh();
     setInterval(refresh, 10 * 60 * 1000);
   </script>
