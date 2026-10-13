@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>2160×256 気象情報</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&amp;display=swap">
+  <title>2160×256 防災情報</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&amp;display=swap">
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -21,56 +21,108 @@
       top: 0;
       width: 2160px;
       height: 256px;
-      margin: 0;
-      padding: 0;
       overflow: hidden;
       background: #000;
       transform-origin: 0 0;
     }
     .track {
       display: flex;
-      flex-direction: row;
-      align-items: center;
       height: 256px;
       width: max-content;
       backface-visibility: hidden;
     }
-    .seq {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
+    .card {
+      flex: 0 0 2160px;
+      width: 2160px;
       height: 256px;
-      width: max-content;
-      flex: 0 0 auto;
-    }
-    .item {
-      flex: 0 0 auto;
       display: flex;
-      align-items: center;
-      height: 256px;
-      margin: 0;
-      padding: 0 48px 0 0;
-      white-space: nowrap;
-      font-family: "Noto Sans JP", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
-      font-weight: 700;
-      font-size: 96px;
-      line-height: 1;
-      letter-spacing: 0.02em;
+      align-items: stretch;
+      background: #050505;
+      border-bottom: 14px solid #1d4ed8;
       color: #fff;
+      font-family: "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+      font-weight: 700;
     }
+    .badge {
+      flex: 0 0 520px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background: #e10600;
+      clip-path: polygon(0 0, 86% 0, 100% 50%, 86% 100%, 0 100%);
+      padding: 0 72px 0 28px;
+    }
+    .card.is-none .badge { background: #1e3a8a; }
+    .badge svg { width: 92px; height: 92px; flex: 0 0 auto; }
+    .badge span {
+      font-size: 64px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+    .body {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      padding: 0 36px 0 28px;
+      gap: 28px;
+    }
+    .msg {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      font-size: 52px;
+      font-weight: 900;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .msg .name {
+      color: #ffe14a;
+    }
+    .card.is-none .msg { font-size: 58px; }
+    .rule {
+      flex: 0 0 4px;
+      width: 4px;
+      height: 120px;
+      background: #fff;
+    }
+    .note {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 44px;
+      font-weight: 700;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .note svg { width: 72px; height: 72px; flex: 0 0 auto; }
+    .card.is-none .rule,
+    .card.is-none .note { display: none; }
   </style>
 </head>
 <body>
-  <main class="stage" id="stage" aria-label="気象情報">
-    <div class="track" id="track">
-      <div class="seq" id="seq"></div>
-    </div>
+  <main class="stage" id="stage" aria-label="防災情報">
+    <div class="track" id="track"></div>
   </main>
   <script>
-    var STAGE = 2160;
-    var SPEED = 120;
     var AREA = '270000';
+    var CITY = '2710000';
+    var CITY_NAME = '大阪市';
+    var SPEED = 80;
     var signature = '';
+    var WARN_NAME = {
+      '02': '暴風雪警報', '03': '大雨警報', '04': '洪水警報', '05': '暴風警報',
+      '06': '大雪警報', '07': '波浪警報', '08': '高潮警報',
+      '10': '大雨注意報', '12': '大雪注意報', '13': '風雪注意報', '14': '雷注意報',
+      '15': '強風注意報', '16': '波浪注意報', '17': '融雪注意報', '18': '高潮注意報',
+      '19': '濃霧注意報', '20': '乾燥注意報', '21': 'なだれ注意報', '22': '低温注意報',
+      '23': '霜注意報', '24': '着氷注意報', '25': '着雪注意報',
+      '32': '暴風雪特別警報', '33': '大雨特別警報', '35': '暴風特別警報',
+      '36': '大雪特別警報', '37': '波浪特別警報', '38': '高潮特別警報'
+    };
 
     function fitStage() {
       var stage = document.getElementById('stage');
@@ -84,10 +136,44 @@
     window.addEventListener('resize', fitStage);
     fitStage();
 
-    function linesOf(text) {
-      return String(text || '').split(/\n+/).map(function (line) {
-        return line.replace(/^[\s\u3000]+|[\s\u3000]+$/g, '');
-      }).filter(function (line) { return line.length > 0; });
+    function warnIcon() {
+      return '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 L58 56 H6 Z" fill="none" stroke="#fff" stroke-width="4"/><rect x="29" y="26" width="6" height="16" fill="#fff"/><rect x="29" y="46" width="6" height="6" fill="#fff"/></svg>';
+    }
+
+    function infoIcon() {
+      return '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="none" stroke="#fff" stroke-width="4"/><rect x="29" y="18" width="6" height="6" fill="#fff"/><rect x="29" y="28" width="6" height="18" fill="#fff"/></svg>';
+    }
+
+    function adviceFor(name) {
+      if (name.indexOf('強風') >= 0 || name.indexOf('暴風') >= 0) return '屋外作業は十分にご注意ください。';
+      if (name.indexOf('大雨') >= 0 || name.indexOf('洪水') >= 0) return '川や低い土地には近づかないでください。';
+      if (name.indexOf('雷') >= 0) return '建物の中で安全を確保してください。';
+      if (name.indexOf('雪') >= 0) return '外出は十分にご注意ください。';
+      if (name.indexOf('波浪') >= 0 || name.indexOf('高潮') >= 0) return '海岸には近づかないでください。';
+      if (name.indexOf('濃霧') >= 0) return '見通しが悪くなります。ご注意ください。';
+      if (name.indexOf('乾燥') >= 0) return '火の取り扱いにご注意ください。';
+      return '最新の情報にご注意ください。';
+    }
+
+    function verbFor(status) {
+      if (status === '継続') return 'が継続しています';
+      return 'が発表されています';
+    }
+
+    function cardHtml(item) {
+      if (!item) {
+        return '<section class="card is-none">' +
+          '<div class="badge">' + infoIcon() + '<span>防災情報</span></div>' +
+          '<div class="body"><p class="msg">警報・注意報は発表されていません</p></div>' +
+          '</section>';
+      }
+      return '<section class="card">' +
+        '<div class="badge">' + warnIcon() + '<span>防災情報</span></div>' +
+        '<div class="body">' +
+          '<p class="msg">' + CITY_NAME + 'に<span class="name">' + item.name + '</span>' + item.verb + '</p>' +
+          '<div class="rule"></div>' +
+          '<p class="note">' + infoIcon() + '<span>' + item.advice + '</span></p>' +
+        '</div></section>';
     }
 
     async function fetchJson(url) {
@@ -96,55 +182,65 @@
       return res.json();
     }
 
-    async function loadLines() {
-      var overview = await fetchJson('https://www.jma.go.jp/bosai/forecast/data/overview_forecast/' + AREA + '.json');
-      var lines = [];
-      linesOf(overview && overview.headlineText).forEach(function (line) { lines.push(line); });
-      linesOf(overview && overview.text).forEach(function (line) { lines.push(line); });
-      if (!lines.length) lines.push('大阪市の気象情報を受信しています');
-      return lines;
+    async function loadItems() {
+      var data = await fetchJson('https://www.jma.go.jp/bosai/warning/data/warning/' + AREA + '.json');
+      var found = [];
+      var seen = {};
+      var types = (data && data.areaTypes) || [];
+      for (var i = 0; i < types.length; i++) {
+        var areas = types[i].areas || [];
+        for (var j = 0; j < areas.length; j++) {
+          if (String(areas[j].code) !== CITY) continue;
+          var list = areas[j].warnings || [];
+          for (var k = 0; k < list.length; k++) {
+            var status = list[k].status || '';
+            if (!status || status === '解除' || status.indexOf('なし') >= 0) continue;
+            var key = String(list[k].code);
+            if (key.length === 1) key = '0' + key;
+            var name = WARN_NAME[key];
+            if (!name || seen[name]) continue;
+            seen[name] = true;
+            found.push({ name: name, verb: verbFor(status), advice: adviceFor(name) });
+          }
+        }
+      }
+      return found;
     }
 
-    function play(lines) {
-      var seq = document.getElementById('seq');
+    function play(items) {
       var track = document.getElementById('track');
-      seq.innerHTML = '';
-      lines.forEach(function (line) {
-        var row = document.createElement('div');
-        row.className = 'item';
-        row.textContent = line;
-        seq.appendChild(row);
-      });
-      var clone = seq.nextElementSibling;
-      if (clone) clone.remove();
-      clone = seq.cloneNode(true);
-      clone.removeAttribute('id');
-      clone.setAttribute('aria-hidden', 'true');
-      track.appendChild(clone);
-
+      var html = '';
+      if (!items.length) html = cardHtml(null);
+      else items.forEach(function (item) { html += cardHtml(item); });
+      if (items.length > 1) html += html;
+      track.innerHTML = html;
       track.style.animation = 'none';
       track.style.transform = 'none';
+      if (items.length < 2) return;
       void track.offsetWidth;
-      var lap = seq.getBoundingClientRect().width;
-      if (!(lap > 0)) return;
+      var lap = 2160 * items.length;
       var sheet = document.getElementById('ticker-style');
       if (!sheet) {
         sheet = document.createElement('style');
         sheet.id = 'ticker-style';
         document.head.appendChild(sheet);
       }
-      var lapText = String(Math.round(lap));
-      sheet.textContent = '@keyframes ticker{from{transform:translate3d(0,0,0)}to{transform:translate3d(-' + lapText + 'px,0,0)}}';
+      sheet.textContent = '@keyframes ticker{from{transform:translate3d(0,0,0)}to{transform:translate3d(-' + lap + 'px,0,0)}}';
       track.style.animation = 'ticker ' + (lap / SPEED) + 's linear infinite';
     }
 
     async function refresh() {
-      var lines = await loadLines();
-      var next = lines.join('\n');
-      if (next === signature) return;
+      var items = [];
+      try { items = await loadItems(); } catch (e) { items = []; }
+      var next = items.map(function (item) { return item.name + item.verb; }).join('\n');
+      if (next === signature && trackHasCards()) return;
       signature = next;
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
-      play(lines);
+      play(items);
+    }
+
+    function trackHasCards() {
+      return document.querySelector('#track .card');
     }
 
     refresh();
