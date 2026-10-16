@@ -191,8 +191,8 @@
       text-align: center;
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 700;
-      font-size: 48px;
-      line-height: 56px;
+      font-size: 36px;
+      line-height: 1;
       color: #1a1a1a;
       letter-spacing: 0;
     }
@@ -205,8 +205,8 @@
     .foot-piece {
       font-family: "Noto Sans JP", sans-serif;
       font-weight: 700;
-      font-size: 48px;
-      line-height: 56px;
+      font-size: 36px;
+      line-height: 1;
       color: #1a1a1a;
       white-space: nowrap;
     }
@@ -528,7 +528,7 @@
       });
       bar.appendChild(txt);
       var cap = bar.clientWidth > 40 ? bar.clientWidth - 12 : 1040;
-      var size = cap > 800 ? 48 : 32;
+      var size = cap > 800 ? 36 : 28;
       var pieces = txt.querySelectorAll('.foot-piece');
       pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
       while (size > 10 && txt.scrollWidth > cap) {
@@ -568,7 +568,7 @@
           piece.textContent = part;
           txt.appendChild(piece);
         });
-        var size = 48;
+        var size = 36;
         var pieces = txt.querySelectorAll('.foot-piece');
         pieces.forEach(function (el) { el.style.fontSize = size + 'px'; });
         while (size > 28 && txt.scrollWidth > width - 16) {
